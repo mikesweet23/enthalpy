@@ -39,7 +39,7 @@ header.top{
   position:sticky; top:0; z-index:40; background:rgba(8,19,31,.94);
   backdrop-filter:blur(10px); border-bottom:1px solid var(--line);
 }
-.topin{max-width:1400px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center}
+.topin{max-width:1400px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .brand{font-family:var(--cond);font-weight:700;font-size:19px;letter-spacing:.02em;white-space:nowrap}
 .brand span{color:var(--cyan)}
 .jobname{
@@ -59,6 +59,9 @@ header.top{
 .modesw button:last-child{border-right:0}
 .modesw button[aria-pressed=true]{background:var(--brand);color:#04121F;font-weight:700}
 .modesw button[data-m=site][aria-pressed=true]{background:var(--amber)}
+.unitwrap{display:flex;align-items:center;gap:7px}
+.unitlbl{font-family:var(--cond);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.modesw.unitsw button{font-family:var(--mono);font-size:12px;padding:7px 9px}
 .sl{display:flex;align-items:center;gap:12px;padding:9px 0}
 .sl label{flex:0 0 108px;font-size:13px;color:var(--ink2)}
 .sl input[type=range]{flex:1;accent-color:var(--brand);height:26px;background:transparent}
@@ -121,13 +124,13 @@ input:disabled{opacity:.35}
 
 /* ladder — signature element */
 .ladder{padding:4px 0 2px}
-.lrow{display:grid;grid-template-columns:112px 1fr 78px;align-items:center;gap:9px;padding:4px 0}
+.lrow{display:grid;grid-template-columns:112px 1fr 96px;align-items:center;gap:9px;padding:4px 0}
 .lname{font-family:var(--cond);font-size:12.5px;color:var(--ink2);text-align:right;letter-spacing:.02em}
 .ltrack{height:16px;background:#0B1A28;border:1px solid var(--line);border-radius:3px;position:relative;overflow:hidden}
 .lfill{position:absolute;left:0;top:0;bottom:0;background:#1C3550;transition:width .35s cubic-bezier(.2,.7,.3,1)}
 .lrow.win .lfill{background:linear-gradient(90deg,#1E5FA8,var(--cyan))}
 .lrow.win .lname{color:var(--cyan);font-weight:700}
-.lval{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:right}
+.lval{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:right;white-space:nowrap}
 .lrow.win .lval{color:var(--ink)}
 .lrow.na .ltrack{opacity:.35}
 .lrow.short .lfill{background:linear-gradient(90deg,#7A2733,#FF6B6B)}
@@ -194,6 +197,14 @@ svg{display:block;width:100%;height:auto}
     <button data-m="design" aria-pressed="true" onclick="setMode('design')">Design</button>
     <button data-m="site" aria-pressed="false" onclick="setMode('site')">Site check</button>
     <button data-m="sense" aria-pressed="false" onclick="setMode('sense')">Sense check</button>
+  </div>
+  <div class="unitwrap">
+    <span class="unitlbl">Air volume</span>
+    <div class="modesw unitsw" id="unitsw" role="group" aria-label="Air volume units">
+      <button data-u="lps" aria-pressed="true"  onclick="setAirUnit('lps')" title="litres per second">l/s</button>
+      <button data-u="m3s" aria-pressed="false" onclick="setAirUnit('m3s')" title="cubic metres per second">m³/s</button>
+      <button data-u="m3h" aria-pressed="false" onclick="setAirUnit('m3h')" title="cubic metres per hour">m³/h</button>
+    </div>
   </div>
   <button class="tbtn" onclick="saveFile()">Save</button>
   <button class="tbtn" onclick="document.getElementById('loadFile').click()">Open</button>
@@ -439,6 +450,41 @@ function solve(S){
 </script>
 
 <script>
+/* ---------------- air volume units ----------------
+   Everything is held internally in l/s. These helpers only change how a
+   volumetric AIR flow is shown and typed in. Water flows (chilled water,
+   LPHW), condensate and specific fan power are deliberately left alone. */
+const AIRUNITS={
+  lps:{n:'l/s',  long:'litres per second',        f:1,     d:0},
+  m3s:{n:'m³/s', long:'cubic metres per second',  f:0.001, d:3},
+  m3h:{n:'m³/h', long:'cubic metres per hour',    f:3.6,   d:0}
+};
+let AU='lps';
+function auDef(){return AIRUNITS[AU]||AIRUNITS.lps;}
+function auN(){return auDef().n;}
+function toU(lps){return lps*auDef().f;}          // l/s -> displayed unit
+function frU(v){return v/auDef().f;}              // displayed unit -> l/s
+function fv(lps,extra){return n(toU(lps),auDef().d+(extra||0));}   // number only
+function fu(lps,extra){return fv(lps,extra)+' '+auN();}            // number + unit
+function fother(lps,extra){                        // the two units not selected
+  return Object.keys(AIRUNITS).filter(k=>k!==AU)
+   .map(k=>n(lps*AIRUNITS[k].f,AIRUNITS[k].d+(extra||0))+' '+AIRUNITS[k].n).join(' · ');
+}
+function auVal(lps){return String(+toU(lps).toFixed(4));}          // for input value=
+function auStep(st){
+  const s=st*auDef().f;
+  if(!isFinite(s)||s<=0) return 'any';
+  const e=Math.pow(10,Math.floor(Math.log10(s))), m=s/e;
+  return String(+((m<1.5?1:m<3.5?2:m<7.5?5:10)*e).toPrecision(6));
+}
+function syncUnitButtons(){
+  document.querySelectorAll('#unitsw button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.u===AU)));
+}
+function setAirUnit(u){
+  if(!AIRUNITS[u]||u===AU) return;
+  AU=u; syncUnitButtons(); buildInputs(); refresh();
+}
+
 /* ---------------- input schema ---------------- */
 const SEC=[
 {id:'space',mode:'design',badge:'01',n:'The space',s:'What the client has asked for',f:[
@@ -470,18 +516,18 @@ const SEC=[
  {k:'flowMode',l:'Airflow',seg:[['solve','Work out what it needs'],['fixed','Use the unit I have']],v:'solve'},
  {k:'flowRef',l:'That airflow is measured at',seg:[['supply','The supply condition'],['return','The fan inlet / return air']],v:'supply',
   h:'Volumetric flow depends on air density, so it matters where it is measured. A draw-through AHU fan sits after the coil, so the quoted volume is at supply condition. A close-control unit with the plug fan below the coil draws return air, so its rating is at return density — worth 3–4% on mass flow across a typical supply-to-room difference.'},
- {k:'flowFixed',l:'Airflow the manufacturer quotes',u:'l/s',v:3000,st:50,show:s=>s.flowMode==='fixed',
+ {k:'flowFixed',l:'Airflow the manufacturer quotes',u:'l/s',au:true,v:3000,st:50,show:s=>s.flowMode==='fixed',
   h:'Once a unit is selected you are stuck with its rated airflow. Put it in here and the tool keeps the requirements on screen so you can see exactly what the unit does and does not satisfy.'},
  {k:'freshMode',l:'Fresh air set by',seg:[['perp','Per person'],['ach','Air changes'],['fixed','Fixed rate'],['pct','% of supply']],v:'perp'},
- {k:'freshPerP',l:'Fresh air per person',u:'l/s',v:10,st:1,show:s=>s.freshMode==='perp',h:'CIBSE Guide A / BS EN 16798: 10 l/s·person is the usual comfort basis; 8 l/s minimum, 12–15 for higher expectation.'},
+ {k:'freshPerP',l:'Fresh air per person',u:'l/s',au:true,v:10,st:1,show:s=>s.freshMode==='perp',h:'CIBSE Guide A / BS EN 16798: 10 l/s·person (0.01 m³/s, 36 m³/h) is the usual comfort basis; 8 l/s (28.8 m³/h) minimum, 12–15 l/s (43–54 m³/h) for higher expectation.'},
  {k:'freshACH',l:'Fresh air change rate',u:'ac/h',v:2,st:0.5,show:s=>s.freshMode==='ach'},
- {k:'freshFixed',l:'Fresh air, fixed',u:'l/s',v:500,st:50,show:s=>s.freshMode==='fixed'},
+ {k:'freshFixed',l:'Fresh air, fixed',u:'l/s',au:true,v:500,st:50,show:s=>s.freshMode==='fixed'},
  {k:'freshPct',l:'Fresh air as % of supply',u:'%',v:20,st:5,show:s=>s.freshMode==='pct'},
- {k:'extract',l:'Extract taken straight from the room — LEV, canopies',u:'l/s',v:0,st:50},
+ {k:'extract',l:'Extract taken straight from the room — LEV, canopies',u:'l/s',au:true,v:0,st:50},
  {k:'exhMode',l:'Exhaust spilled from the return',seg:[['pct','% of supply'],['lps','Fixed rate'],['bal','Balance the room']],v:'pct',
   h:'Fresh air has to leave somewhere. Whatever you do not spill at the unit goes out through the fabric and pressurises the room. Fresh − exhaust − extract = the air pushed through the shell.'},
  {k:'exhPct',l:'Exhaust',u:'%',v:0,st:5,show:s=>s.exhMode==='pct'},
- {k:'exhFixed',l:'Exhaust',u:'l/s',v:0,st:50,show:s=>s.exhMode==='lps'},
+ {k:'exhFixed',l:'Exhaust',u:'l/s',au:true,v:0,st:50,show:s=>s.exhMode==='lps'},
  {k:'envArea',l:'Envelope area — walls, ceiling, floor, doors',u:'m²',v:600,st:10},
  {k:'leakClass',l:'How tight is the shell',sel:LEAK,v:'avg'},
  {k:'pressMode',l:'Room pressure',seg:[['none','Not controlled'],['leak','From leakage'],['ach','As air changes']],v:'none'},
@@ -521,7 +567,8 @@ const SEC=[
  {k:'fanMode',l:'Supply fan heat',seg:[['sfp','From fan power'],['kw','Straight from the data sheet'],['k','As a temperature rise']],v:'sfp'},
  {k:'fanHeatKW',l:'Fan and motor heat',u:'kW',v:1,st:0.1,show:s=>s.fanMode==='kw',
   h:'Manufacturers list this as "fan motor heat" or "fan motor exhaust heat". It is also the gap between a gross and a net cooling capacity: subtract net from gross and that is the fan heat. Enter 0.9 for 900 W.'},
- {k:'sfp',l:'Supply fan specific power',u:'W/l/s',v:0.9,st:0.1,show:s=>s.fanMode==='sfp'},
+ {k:'sfp',l:'Supply fan specific power',u:'W/l/s',v:0.9,st:0.1,show:s=>s.fanMode==='sfp',
+  h:'Specific fan power stays in W per litre/second whichever air volume unit is selected at the top — that is how Part L and BS EN 16798 quote it, and 1 W/l/s is the same number as 1 kW/(m³/s).'},
  {k:'motorInAir',l:'Motor in the airstream',seg:[[1,'Yes — plug fan'],[0,'No — belt drive out']],v:1,show:s=>s.fanMode==='sfp'},
  {k:'fanK',l:'Supply air temperature rise across the fan',u:'K',v:0.8,st:0.1,show:s=>s.fanMode==='k'},
  {k:'reheatSrc',l:'Reheat',seg:[['lphw','LPHW'],['recover','Run-around'],['hotgas','Hot gas'],['elec','Electric'],['none','None']],v:'lphw',
@@ -534,7 +581,7 @@ const SEC=[
  {k:'humid',l:'Winter humidification',seg:[['steam','Steam'],['adiabatic','Adiabatic'],['none','None']],v:'steam'},
 ]},
 {id:'survey',badge:'S',mode:'site',n:'The measurements',s:'What you read on site',f:[
- {k:'svFlow',l:'Measured airflow',u:'l/s',v:1000,st:10},
+ {k:'svFlow',l:'Measured airflow',u:'l/s',au:true,v:1000,st:10},
  {k:'svFlowRef',l:'Measured at',seg:[['supply','Supply duct'],['return','Return / fan inlet']],v:'supply',
   h:'Volumetric flow depends on density, so it matters where you took it. Everything below scales directly off this figure — 10% out here is 10% out on every kilowatt.'},
  {k:'svSupT',l:'Supply air temperature',u:'°C',v:12,st:0.1},
@@ -596,6 +643,8 @@ function buildInputs(){
       } else if(f.sel){
         h+=`<div class="field"><label>${f.l}</label><select data-k="${f.k}">`+
           Object.keys(f.sel).map(k=>`<option value="${k}" ${S[f.k]===k?'selected':''}>${f.sel[k].n}</option>`).join('')+`</select></div>`;
+      } else if(f.au){
+        h+=`<div class="field"><label>${f.l}</label><input type="number" step="${auStep(f.st)}" data-k="${f.k}" data-au="1" value="${auVal(S[f.k])}"><span class="u">${auN()}</span></div>`;
       } else {
         h+=`<div class="field"><label>${f.l}</label><input type="number" step="${f.st}" data-k="${f.k}" value="${S[f.k]}"><span class="u">${f.u||''}</span></div>`;
       }
@@ -608,7 +657,8 @@ function buildInputs(){
   el.innerHTML=h;
   if(MODE==='sense') bindSense();
   el.querySelectorAll('input[type=number]').forEach(i=>{
-    i.addEventListener('input',e=>{S[e.target.dataset.k]=parseFloat(e.target.value)||0; refresh();});
+    i.addEventListener('input',e=>{const raw=parseFloat(e.target.value)||0;
+      S[e.target.dataset.k]=e.target.dataset.au?frU(raw):raw; refresh();});
     i.addEventListener('wheel',()=>{if(document.activeElement===i) i.blur();},{passive:true});
     i.setAttribute('inputmode','decimal');
   });
@@ -617,7 +667,7 @@ function buildInputs(){
     if(k==='sitePreset'&&PRESET[e.target.value]){
       Object.assign(S,PRESET[e.target.value]);
       Object.keys(PRESET[e.target.value]).forEach(kk=>{
-        const inp=el.querySelector('input[data-k="'+kk+'"]'); if(inp) inp.value=S[kk];});
+        const inp=el.querySelector('input[data-k="'+kk+'"]'); if(inp) inp.value=inp.dataset.au?auVal(S[kk]):S[kk];});
     }
     applyVisibility(); refresh();}));
   el.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',e=>{
@@ -643,7 +693,7 @@ function senseWidget(){
    <div class="sl"><label>Dry bulb</label><input type="range" id="sT" min="-10" max="50" step="0.5" value="${SENSE.t}"><div class="rv" id="sTv">${SENSE.t.toFixed(1)} °C</div></div>
    <div class="sl"><label>Relative humidity</label><input type="range" id="sR" min="5" max="100" step="1" value="${SENSE.rh}"><div class="rv" id="sRv">${SENSE.rh} %</div></div>
    <div class="sl"><label>Cool it to</label><input type="range" id="sC" min="-10" max="50" step="0.5" value="${SENSE.c}"><div class="rv" id="sCv">${SENSE.c.toFixed(1)} °C</div></div>
-   <div class="sl"><label>Airflow</label><input type="range" id="sF" min="50" max="6000" step="50" value="${SENSE.f}"><div class="rv" id="sFv">${SENSE.f} l/s</div></div>
+   <div class="sl"><label>Airflow</label><input type="range" id="sF" min="${toU(50)}" max="${toU(6000)}" step="${toU(50)}" value="${toU(SENSE.f)}"><div class="rv" id="sFv">${fu(SENSE.f)}</div></div>
    <div class="hint">Drag the first two to set an air condition. The third cools that same air and shows what happens to it — nothing here touches the design or the site check.</div>
    <div class="senseg" id="sOut"></div></div>`;
 }
@@ -653,7 +703,7 @@ function bindSense(){
     e.addEventListener('input',()=>{SENSE.t=parseFloat(document.getElementById('sT').value);
       SENSE.rh=parseFloat(document.getElementById('sR').value);
       SENSE.c=parseFloat(document.getElementById('sC').value);
-      SENSE.f=parseFloat(document.getElementById('sF').value); drawSense();});});
+      SENSE.f=frU(parseFloat(document.getElementById('sF').value)); drawSense();});});
   drawSense();
 }
 function senseCalc(){
@@ -673,7 +723,7 @@ function drawSense(){
   document.getElementById('sTv').textContent=SENSE.t.toFixed(1)+' °C';
   document.getElementById('sRv').textContent=SENSE.rh+' %';
   document.getElementById('sCv').textContent=SENSE.c.toFixed(1)+' °C';
-  document.getElementById('sFv').textContent=n(SENSE.f,0)+' l/s';
+  document.getElementById('sFv').textContent=fu(SENSE.f);
   g.innerHTML=
    `<div><div class="k">Moisture</div><div class="v">${n(a.W*1000,2)}</div><div class="k">g/kg dry air</div></div>
     <div><div class="k">Dew point</div><div class="v">${n(a.dp,1)}</div><div class="k">°C</div></div>
@@ -684,7 +734,7 @@ function drawSense(){
     <div><div class="k">Cooled to ${n(SENSE.c,1)}°C</div><div class="v ${cooled?'':'mut'}">${n(b.rh*100,0)}%</div><div class="k">${cooled?'saturated — water drops out':'no condensation'}</div></div>
     <div><div class="k">Moisture removed</div><div class="v ${drop>0?'':'mut'}">${n(drop,2)}</div><div class="k">g/kg dry air</div></div>
     <div><div class="k">Water removed</div><div class="v ${drop>0?'':'mut'}">${n(waterKgh,2)}</div><div class="k">kg/h · ${n(waterKgh,1)} litres/h</div></div>
-    <div><div class="k">Cooling duty</div><div class="v">${n(kW,2)}</div><div class="k">kW at ${n(SENSE.f,0)} l/s</div></div>
+    <div><div class="k">Cooling duty</div><div class="v">${n(kW,2)}</div><div class="k">kW at ${fu(SENSE.f)}</div></div>
     <div><div class="k">Sensible / latent</div><div class="v">${n(sensKW,1)}/${n(latKW,1)}</div><div class="k">kW · ${n(dh,1)} kJ/kg</div></div>`;
   const c=document.getElementById('senseChart'); if(c) c.innerHTML=senseChart(a,b,cooled);
 }
@@ -813,7 +863,8 @@ function buildSurvey(){
   </div></div>`;
   h+=`<details class="card" open><summary><span class="step">1</span><h2>What the room is doing</h2></summary><div class="cbody">
    <table class="st"><tr><th>&nbsp;</th><th>Value</th><th></th></tr>
-   <tr><td>Supply air mass flow</td><td>${n(Q.mda,3)} kg/s</td><td class="mut">${n(Q.mda*3600,0)} kg/h dry air · ${n(S.svFlow,0)} l/s at ${S.svFlowRef==='return'?'return':'supply'} density</td></tr>
+   <tr><td>Supply air mass flow</td><td>${n(Q.mda,3)} kg/s</td><td class="mut">${n(Q.mda*3600,0)} kg/h dry air · ${fu(S.svFlow)} at ${S.svFlowRef==='return'?'return':'supply'} density</td></tr>
+   <tr><td>Measured airflow</td><td>${fu(S.svFlow)}</td><td class="mut">${fother(S.svFlow)}</td></tr>
    <tr><td>Water carried IN with the supply air</td><td>${n(Q.mda*Q.sup.W*3600,2)} kg/h</td><td class="mut">at ${n(Q.sup.W*1000,2)} g/kg</td></tr>
    <tr><td>Water carried OUT with the return air</td><td>${n(Q.mda*Q.ret.W*3600,2)} kg/h</td><td class="mut">at ${n(Q.ret.W*1000,2)} g/kg</td></tr>
    <tr><td>Water added inside the room</td><td>${n(Q.moist,2)} kg/h</td><td class="mut">the difference — people, process, infiltration</td></tr>
@@ -839,7 +890,8 @@ function buildSurvey(){
    </table>${surveyChart(Q)}</div></details>`;
   document.getElementById('rightcol').innerHTML=h;
   document.getElementById('barin').innerHTML=
-   `<div class="bcell"><div class="k">Sensible</div><div class="v">${n(Q.sens,1)} kW</div></div>
+   `<div class="bcell"><div class="k">Airflow</div><div class="v">${fu(S.svFlow)}</div></div>
+    <div class="bcell"><div class="k">Sensible</div><div class="v">${n(Q.sens,1)} kW</div></div>
     <div class="bcell"><div class="k">Latent</div><div class="v">${n(Q.lat,1)} kW</div></div>
     <div class="bcell"><div class="k">Moisture</div><div class="v">${n(Q.moist,2)} kg/h</div></div>
     <div class="bcell"><div class="k">Room</div><div class="v">${n(Q.ret.t,1)}° / ${n(Q.ret.rh*100,0)}%</div></div>
@@ -892,14 +944,14 @@ function schematic(R){
   }
   g+=lab(76,248,'FRESH AIR',AM);
   g+=big(76,272,`${n(pctF,0)}%`,AM,22);
-  g+=val(76,292,`${n(R.oa_ls,0)} l/s`,AM,12.5);
+  g+=val(76,292,fu(R.oa_ls),AM,12.5);
 
   // exhaust
   if(R.exh_ls>0){
     g+=box(196,158,152,74,VI);
     g+=lab(208,178,'EXHAUST SPILL',VI);
     g+=big(208,204,`${n(pctX,0)}%`,VI,22);
-    g+=val(262,204,`${n(R.exh_ls,0)} l/s`,VI,12.5);
+    g+=val(262,204,fu(R.exh_ls),VI,12.5);
     g+=val(208,222,hrOn?'through the recovery':'discharged',MU,10.5);
   } else {
     g+=lab(200,196,'NO EXHAUST SPILL',MU);
@@ -925,7 +977,7 @@ function schematic(R){
   if(S.procLatent>0){g+=lab(374,254,'PROCESS MOISTURE',MU);g+=val(534,254,`${n(S.procLatent,1)} kg/h`,IN,12);}
   g+=`<line x1="374" y1="266" x2="690" y2="266" stroke="#1B3348"/>`;
   g+=val(374,284,`${n(S.roomArea,0)} m² × ${n(S.roomHeight,1)} m = ${n(R.V,0)} m³ · ${n(R.ach,1)} ac/h`,MU,10.5);
-  g+=val(374,301,(S.extract>0?`LEV ${n(S.extract,0)} l/s · `:'')+bal(R),R.leakOut<-0.5?RD:R.leakOut>0.5?BR:MU,10.5);
+  g+=val(374,301,(S.extract>0?`LEV ${fu(S.extract)} · `:'')+bal(R),R.leakOut<-0.5?RD:R.leakOut>0.5?BR:MU,10.5);
   if(R.leakOut>0.5) g+=lab(712,196,'OUT',BR,10);
 
   // AHU
@@ -946,7 +998,7 @@ function schematic(R){
   g+=comp(450,80,'FAN',BR,`+${n(R.fanRise,1)} K`,15,S.fanMode==='sfp'?`${n(S.sfp,1)} W/l/s`:'stated','');
   g+=box(538,384,158,80,BR,'rgba(46,144,255,.10)');
   g+=lab(550,402,'SUPPLY AIR',BR);
-  const fs=String(n(R.flow,0)); g+=big(550,428,fs,BR,fs.length>5?21:24); g+=val(550+fs.length*(fs.length>5?12.7:14.5)+7,428,'l/s',BR,12);
+  const fs=fv(R.flow); g+=big(550,428,fs,BR,fs.length>5?21:24); g+=val(550+fs.length*(fs.length>5?12.7:14.5)+7,428,auN(),BR,12);
   g+=val(550,445,stl(R.supply),IN,11.5);
   g+=val(550,459,`${n(S.roomT-R.supply.t,1)} K below room`,MU,10);
   g+=lab(632,344,'SUPPLY',BR);
@@ -958,7 +1010,7 @@ function schematic(R){
 function bal(R){
   const pa=R.roomPa;
   return Math.abs(R.leakOut)<0.5?'air balanced — nothing through the shell'
-    :`${R.leakOut>0?'+':''}${n(pa,1)} Pa · ${n(Math.abs(R.leakOut),0)} l/s ${R.leakOut>0?'out through shell':'drawn IN through shell'}`;
+    :`${R.leakOut>0?'+':''}${n(pa,1)} Pa · ${fu(Math.abs(R.leakOut))} ${R.leakOut>0?'out through shell':'drawn IN through shell'}`;
 }
 
 function ladder(R){
@@ -973,19 +1025,19 @@ function ladder(R){
     const shrt=fixed&&R.shortfall[k];
     h+=`<div class="lrow ${win?'win':''} ${na?'na':''} ${shrt?'short':''}"><div class="lname">${DRV[k][0]}</div>
     <div class="ltrack"><div class="lfill" style="width:${Math.min(100,vals[i]/mx*100)}%"></div>${fixed?`<div class="lmark" style="left:${Math.min(100,R.flow/mx*100)}%"></div>`:''}</div>
-    <div class="lval">${k==='latent'&&R.latImposs?'∞':n(vals[i],0)+' l/s'}</div></div>`;
+    <div class="lval">${k==='latent'&&R.latImposs?'∞':fu(vals[i])}</div></div>`;
   });
   if(fixed) h+=`<div class="lrow sel"><div class="lname">Unit airflow</div>
     <div class="ltrack"><div class="lfill" style="width:${Math.min(100,R.flow/mx*100)}%"></div></div>
-    <div class="lval">${n(R.flow,0)} l/s</div></div>`;
+    <div class="lval">${fu(R.flow)}</div></div>`;
   h+='</div>';
   if(fixed){
     const sk=Object.keys(R.shortfall);
     if(sk.length) h+=`<div class="driver" style="border-left-color:var(--bad);background:rgba(255,107,107,.08)">
-      <b class="bad">${n(R.flow,0)} l/s does not cover everything.</b> Short on ${sk.map(k=>DRV[k][0].toLowerCase()+' ('+n(R.shortfall[k],0)+' l/s)').join(', ')}.
+      <b class="bad">${fu(R.flow)} does not cover everything.</b> Short on ${sk.map(k=>DRV[k][0].toLowerCase()+' ('+fu(R.shortfall[k])+')').join(', ')}.
       Read the room it actually achieves below before you commit to this unit.</div>`;
-    else h+=`<div class="driver"><b>${n(R.flow,0)} l/s covers every requirement.</b> The largest of them is
-      ${DRV[R.driver][0].toLowerCase()} at ${n(R.cand[R.driver]||0,0)} l/s, so you have
+    else h+=`<div class="driver"><b>${fu(R.flow)} covers every requirement.</b> The largest of them is
+      ${DRV[R.driver][0].toLowerCase()} at ${fu(R.cand[R.driver]||0)}, so you have
       ${n((R.flow/(R.cand[R.driver]||1)-1)*100,0)}% in hand.</div>`;
     return h;
   }
@@ -996,7 +1048,7 @@ function ladder(R){
      Supply air that is wetter than the room can never dry it, so no airflow fixes this. Drop the chilled water temperature,
      buy a deeper coil (higher contact factor), or put a desiccant in front of it.</div>`;
   } else {
-    h+=`<div class="driver"><b>${DRV[R.driver][0]} sets the airflow at ${n(R.flow,0)} l/s</b> — ${DRV[R.driver][1]}.
+    h+=`<div class="driver"><b>${DRV[R.driver][0]} sets the airflow at ${fu(R.flow)}</b> — ${DRV[R.driver][1]}.
      Everything else is satisfied underneath it. That is ${n(R.ach,1)} air changes an hour and ${n(R.oaPct,0)}% fresh air.</div>`;
   }
   return h;
@@ -1013,15 +1065,15 @@ function checks(R){
   if(S.flowMode==='fixed'){
     const sk=Object.keys(R.shortfall);
     if(sk.length) push('bad','The unit airflow does not meet every requirement',
-      sk.map(k=>DRV[k][0]+' needs '+n(R.shortfall[k],0)+' l/s').join('; ')+`. You have ${n(R.flow,0)} l/s.`);
+      sk.map(k=>DRV[k][0]+' needs '+fu(R.shortfall[k])).join('; ')+`. You have ${fu(R.flow)}.`);
     else push('ok','The unit airflow covers the requirement',
-      `${n(R.flow,0)} l/s against a largest requirement of ${n(R.cand[R.driver]||0,0)} l/s.`);
+      `${fu(R.flow)} against a largest requirement of ${fu(R.cand[R.driver]||0)}.`);
     if(R.shortfall.sensible) push('warn','Supply air must go colder than your limit',
-      `To carry ${n(R.qs,1)} kW on ${n(R.flow,0)} l/s the supply has to be ${n(R.dtSupply,1)} K below room, against the ${n(S.dtMax,1)} K you set.`);
+      `To carry ${n(R.qs,1)} kW on ${fu(R.flow)} the supply has to be ${n(R.dtSupply,1)} K below room, against the ${n(S.dtMax,1)} K you set.`);
     if(R.shortfall.fresh) push('bad','Fresh air is below the ventilation requirement',
-      `${n(R.oa_ls,0)} l/s available against ${n(R.shortfall.fresh,0)} l/s needed. That is a Building Regs and an occupant issue, not a comfort one.`);
+      `${fu(R.oa_ls)} available against ${fu(R.shortfall.fresh)} needed. That is a Building Regs and an occupant issue, not a comfort one.`);
     if(R.shortfall.pressure) push('bad','The room will not hold pressure',
-      `Extract and leakage need ${n(R.shortfall.pressure,0)} l/s. The room will go negative and pull dirty air in.`);
+      `Extract and leakage need ${fu(R.shortfall.pressure)}. The room will go negative and pull dirty air in.`);
   }
   if(R.driver==='latent-impossible') push('bad','Humidity target unreachable','The selection below will not hold the space. Fix the moisture path before quoting anything.');
   if(!R.adpOK){
@@ -1064,18 +1116,18 @@ function checks(R){
   if(R.wet) push('ok','Condensate drain','Wet coil: '+n(R.cond,1)+' kg/h. Trap depth must exceed the fan negative static or the drain will not run.');
 
   if(R.leakOut<-0.5) push(R.roomPa<-1?'bad':'warn','The room will run negative',
-    `Exhaust and extract take ${n(-R.leakOut,0)} l/s more than the fresh air brings in, so the shell pulls that in from wherever it can — about ${n(R.roomPa,1)} Pa.`);
+    `Exhaust and extract take ${fu(-R.leakOut)} more than the fresh air brings in, so the shell pulls that in from wherever it can — about ${n(R.roomPa,1)} Pa.`);
   else if(S.pressMode!=='none'){
     if(R.leakOut<R.leak_ls*0.95) push('warn','Not enough imbalance to hold the pressure you asked for',
-      `${n(S.pressDP,0)} Pa needs ${n(R.leak_ls,0)} l/s pushed through the shell. Fresh minus exhaust minus extract gives ${n(R.leakOut,0)} l/s, which holds about ${n(R.roomPa,1)} Pa. Raise the fresh air or cut the exhaust.`);
-    else push('ok','Room pressure holds',`${n(R.leakOut,0)} l/s through the shell, about ${n(R.roomPa,1)} Pa against the ${n(S.pressDP,0)} Pa asked for.`);
-  } else if(R.leakOut>0.5) push('ok','Room sits positive',`${n(R.leakOut,0)} l/s leaves through the fabric, about ${n(R.roomPa,1)} Pa.`);
+      `${n(S.pressDP,0)} Pa needs ${fu(R.leak_ls)} pushed through the shell. Fresh minus exhaust minus extract gives ${fu(R.leakOut)}, which holds about ${n(R.roomPa,1)} Pa. Raise the fresh air or cut the exhaust.`);
+    else push('ok','Room pressure holds',`${fu(R.leakOut)} through the shell, about ${n(R.roomPa,1)} Pa against the ${n(S.pressDP,0)} Pa asked for.`);
+  } else if(R.leakOut>0.5) push('ok','Room sits positive',`${fu(R.leakOut)} leaves through the fabric, about ${n(R.roomPa,1)} Pa.`);
   if(R.hrRatio>0) push('ok','Heat recovery is earning its place',
     `${n(R.hrSaved,1)} kW off the fresh air. The exhaust covers ${n(R.hrRatio*100,0)}% of the fresh air stream.`);
   else if(S.hrType!=='none') push('warn','Heat recovery has nothing to work against',
     'Recovery is selected but no air is being spilled at the unit. It needs an exhaust stream — either spill some return, or take the recovery out of the price.');
   const oapp=S.occ>0?R.oa_ls/S.occ:0;
-  if(S.occ>0) push(oapp<8?'warn':'ok','Fresh air per person',`${n(oapp,1)} l/s·person at design occupancy.`);
+  if(S.occ>0) push(oapp<8?'warn':'ok','Fresh air per person',`${fu(oapp,1)} per person at design occupancy.`);
 
   const shOK=Math.abs(R.shRHroom-S.roomRH)<=S.tolRH;
   push(R.shRHroom>100?'bad':shOK?'ok':'warn','Off-design check — mild and damp',
@@ -1158,7 +1210,7 @@ function buildResults(R){
     document.getElementById('foot').innerHTML='Moist-air properties to the ASHRAE Hyland–Wexler formulation. Nothing on this page feeds the design or the site check.';return;}
   if(MODE==='site'){buildSurvey();return;}
   h+=`<div class="card rescard" open><div class="kpi">
-   <div><div class="k">Design airflow</div><div class="v">${n(R.flow,0)}</div><div class="n">l/s · ${n(R.flow*3.6,0)} m³/h · ${n(R.ach,1)} ac/h</div></div>
+   <div><div class="k">Design airflow</div><div class="v">${fv(R.flow)}</div><div class="n">${auN()} · ${fother(R.flow)} · ${n(R.ach,1)} ac/h</div></div>
    <div><div class="k">Cooling coil</div><div class="v">${n(R.total,1)}</div><div class="n">kW · ${n(R.sens,1)} sens / ${n(R.lat,1)} lat</div></div>
    <div><div class="k">Reheat</div><div class="v" style="color:${R.reheat>0?'var(--amber)':'var(--ink)'}">${n(R.reheat,1)}</div><div class="n">kW ${S.reheatSrc==='recover'&&R.reheat>0?'· recovered':''}</div></div>
    ${S.coolSrc==='chw'
@@ -1192,9 +1244,10 @@ function buildResults(R){
 
   h+=`<details class="card"><summary><span class="step">F</span><h2>What to buy</h2></summary><div class="cbody">
    <table class="st">
-   <tr><td>Supply airflow</td><td>${n(R.flow,0)} l/s</td></tr>
-   <tr><td>Fresh air / extract replaced</td><td>${n(R.oa_ls,0)} l/s / ${n(S.extract,0)} l/s</td></tr>
-   <tr><td>Leakage at ${n(S.pressDP,0)} Pa</td><td>${S.pressMode==='none'?'—':n(R.leak_ls,0)+' l/s'}</td></tr>
+   <tr><td>Supply airflow</td><td>${fu(R.flow)}</td><td class="mut">${fother(R.flow)}</td></tr>
+   <tr><td>Fresh air / extract replaced</td><td>${fu(R.oa_ls)} / ${fu(S.extract)}</td></tr>
+   <tr><td>Exhaust spilled at the unit</td><td>${fu(R.exh_ls)}</td></tr>
+   <tr><td>Leakage at ${n(S.pressDP,0)} Pa</td><td>${S.pressMode==='none'?'—':fu(R.leak_ls)}</td></tr>
    <tr><td>Cooling coil total / sensible / latent</td><td>${n(R.total,1)} / ${n(R.sens,1)} / ${n(R.lat,1)} kW</td></tr>
    <tr><td>Coil face area at ${n(S.faceVel,2)} m/s</td><td>${n(R.faceArea,2)} m²</td></tr>
    <tr><td>Indicative coil depth for CF ${n(R.CF,2)}</td><td>${R.rows} row</td></tr>
@@ -1222,7 +1275,7 @@ function buildResults(R){
 
   document.getElementById('rightcol').innerHTML=h;
   document.getElementById('barin').innerHTML=
-   `<div class="bcell"><div class="k">Airflow</div><div class="v">${n(R.flow,0)} l/s</div></div>
+   `<div class="bcell"><div class="k">Airflow</div><div class="v">${fu(R.flow)}</div></div>
     <div class="bcell"><div class="k">Cooling</div><div class="v">${n(R.total,1)} kW</div></div>
     <div class="bcell"><div class="k">Reheat</div><div class="v" style="color:${R.reheat>0?'var(--amber)':'var(--ink)'}">${n(R.reheat,1)} kW</div></div>
     <div class="bcell"><div class="k">Room</div><div class="v">${n(R.roomAct.t,1)}° / ${n(Math.min(R.roomAct.rh*100,100),0)}%</div></div>
@@ -1238,16 +1291,17 @@ function refresh(){ try{
   try{ RES.alt=solve(Object.assign({},S,{rhMode:S.rhMode==='band'?'setpoint':'band'})); }catch(x){RES.alt=null;}
   buildResults(RES);}catch(e){console.error(e);} }
 function saveFile(){
-  const blob=new Blob([JSON.stringify({app:'adi-room-first',schema:1,job:document.getElementById('jobName').value,state:S},null,1)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({app:'adi-room-first',schema:1,job:document.getElementById('jobName').value,airUnit:AU,state:S},null,1)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=(document.getElementById('jobName').value||'room-first')+'.json'; a.click();
 }
 function loadFile(e){const f=e.target.files[0]; if(!f)return; const r=new FileReader();
   r.onload=()=>{try{const d=JSON.parse(r.result); if(d.state)Object.assign(S,d.state);
+    if(d.airUnit&&AIRUNITS[d.airUnit]){AU=d.airUnit; syncUnitButtons();}
     document.getElementById('jobName').value=d.job||''; buildInputs(); refresh();}catch(x){alert('That file is not a RoomFirst save.');}};
   r.readAsText(f);}
 window.addEventListener('beforeprint',()=>document.querySelectorAll('details').forEach(d=>d.open=true));
-buildInputs(); refresh();
+syncUnitButtons(); buildInputs(); refresh();
 </script>
 
 </body>
