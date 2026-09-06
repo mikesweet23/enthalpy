@@ -206,6 +206,13 @@ svg{display:block;width:100%;height:auto}
       <button data-u="m3h" aria-pressed="false" onclick="setAirUnit('m3h')" title="cubic metres per hour">m³/h</button>
     </div>
   </div>
+  <div class="unitwrap">
+    <span class="unitlbl">Water flow</span>
+    <div class="modesw unitsw" id="waterunitsw" role="group" aria-label="Water flow units">
+      <button data-wu="lps" aria-pressed="true"  onclick="setWaterUnit('lps')" title="litres per second">l/s</button>
+      <button data-wu="m3h" aria-pressed="false" onclick="setWaterUnit('m3h')" title="cubic metres per hour">m³/h</button>
+    </div>
+  </div>
   <button class="tbtn" onclick="saveFile()">Save</button>
   <button class="tbtn" onclick="document.getElementById('loadFile').click()">Open</button>
   <button class="tbtn" onclick="window.print()">Print</button>
@@ -483,6 +490,28 @@ function syncUnitButtons(){
 function setAirUnit(u){
   if(!AIRUNITS[u]||u===AU) return;
   AU=u; syncUnitButtons(); buildInputs(); refresh();
+}
+
+/* ---------------- water flow units ----------------
+   Chilled water and LPHW volumetric flows. Kept separate from the air
+   volume unit because water is only ever quoted in l/s or m³/h. Flows
+   are calculated and stored internally in l/s; these helpers only change
+   how they are shown. */
+const WATERUNITS={
+  lps:{n:'l/s',  f:1,   d:2},
+  m3h:{n:'m³/h', f:3.6, d:2}
+};
+let WU='lps';
+function wuDef(){return WATERUNITS[WU]||WATERUNITS.lps;}
+function wuN(){return wuDef().n;}
+function wv(lps){return n(lps*wuDef().f,wuDef().d);}   // number only
+function wu(lps){return wv(lps)+' '+wuN();}            // number + unit
+function syncWaterButtons(){
+  document.querySelectorAll('#waterunitsw button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.wu===WU)));
+}
+function setWaterUnit(u){
+  if(!WATERUNITS[u]||u===WU) return;
+  WU=u; syncWaterButtons(); refresh();
 }
 
 /* ---------------- input schema ---------------- */
@@ -1214,7 +1243,7 @@ function buildResults(R){
    <div><div class="k">Cooling coil</div><div class="v">${n(R.total,1)}</div><div class="n">kW · ${n(R.sens,1)} sens / ${n(R.lat,1)} lat</div></div>
    <div><div class="k">Reheat</div><div class="v" style="color:${R.reheat>0?'var(--amber)':'var(--ink)'}">${n(R.reheat,1)}</div><div class="n">kW ${S.reheatSrc==='recover'&&R.reheat>0?'· recovered':''}</div></div>
    ${S.coolSrc==='chw'
-    ?`<div><div class="k">Chilled water</div><div class="v">${n(R.chwFlow,2)}</div><div class="n">l/s at ${n(S.chwF,0)}/${n(S.chwR,0)}°C</div></div>`
+    ?`<div><div class="k">Chilled water</div><div class="v">${wv(R.chwFlow)}</div><div class="n">${wuN()} at ${n(S.chwF,0)}/${n(S.chwR,0)}°C</div></div>`
     :`<div><div class="k">DX absorbed</div><div class="v">${n(R.dxAbs,1)}</div><div class="n">kW · ${n(R.amps(R.dxAbs),0)} A at 400 V</div></div>`}
   </div></div>`;
 
@@ -1256,15 +1285,15 @@ function buildResults(R){
    <tr><td>Water generated inside the room</td><td>${n(R.latKgh,2)} kg/h</td></tr>
    <tr><td>Condensate at the coil</td><td>${n(R.cond,1)} kg/h · ${n(R.cond,1)} litres/h at the drain</td></tr>
    ${S.coolSrc==='chw'
-    ?`<tr><td>Chilled water flow ${S.glycol>0?'('+n(S.glycol,0)+'% glycol)':''}</td><td>${n(R.chwFlow,2)} l/s at ${n(S.chwR-S.chwF,0)} K</td></tr>`
+    ?`<tr><td>Chilled water flow ${S.glycol>0?'('+n(S.glycol,0)+'% glycol)':''}</td><td>${wu(R.chwFlow)} at ${n(S.chwR-S.chwF,0)} K</td></tr>`
     :`<tr><td>DX evaporating temperature</td><td>${n(S.evapT,1)} °C</td></tr><tr><td>DX absorbed power at EER ${n(S.dxEER,1)}</td><td>${n(R.dxAbs,1)} kW · ${n(R.amps(R.dxAbs),0)} A</td></tr>`}
    ${S.reheatSrc==='recover'&&R.reheat>0?'<tr><td>Cooling duty with the run-around in service</td><td>'+n(R.total-R.reheat,1)+' kW</td></tr>':''}
    <tr><td>Cooling duty — gross at the coil</td><td>${n(R.total,1)} kW</td></tr>
    <tr><td>Cooling duty — net into the space</td><td>${n(R.netCool,1)} kW</td></tr>
    <tr><td>Supply fan and motor heat</td><td>${n(R.fanKW,1)} kW  (${n(R.fanRise,2)} K rise)</td></tr>
    <tr><td>Fresh-air share of the cooling duty</td><td>${n(R.oaLoad,1)} kW</td></tr>
-   <tr><td>Reheat battery (${S.reheatSrc==='hotgas'?'hot gas':S.reheatSrc==='recover'?'run-around':S.reheatSrc})</td><td>${n(R.reheat,1)} kW${S.reheatSrc==='lphw'?' / '+n(R.lphwFlow,2)+' l/s LPHW':S.reheatSrc==='elec'?' / '+n(R.amps(R.reheat),0)+' A':R.reheatFree?' / free':''}</td></tr>
-   <tr><td>Winter heater battery (${S.heatSrc==='hp'?'heat pump':S.heatSrc})</td><td>${n(R.heater,1)} kW${S.heatSrc==='lphw'?' / '+n(R.lphwHeatFlow,2)+' l/s LPHW':S.heatSrc==='elec'?' / '+n(R.amps(R.heater),0)+' A':' / '+n(R.hpAbs,1)+' kW absorbed'}</td></tr>
+   <tr><td>Reheat battery (${S.reheatSrc==='hotgas'?'hot gas':S.reheatSrc==='recover'?'run-around':S.reheatSrc})</td><td>${n(R.reheat,1)} kW${S.reheatSrc==='lphw'?' / '+wu(R.lphwFlow)+' LPHW':S.reheatSrc==='elec'?' / '+n(R.amps(R.reheat),0)+' A':R.reheatFree?' / free':''}</td></tr>
+   <tr><td>Winter heater battery (${S.heatSrc==='hp'?'heat pump':S.heatSrc})</td><td>${n(R.heater,1)} kW${S.heatSrc==='lphw'?' / '+wu(R.lphwHeatFlow)+' LPHW':S.heatSrc==='elec'?' / '+n(R.amps(R.heater),0)+' A':' / '+n(R.hpAbs,1)+' kW absorbed'}</td></tr>
    <tr><td>Total electrical load (fans excluded)</td><td>${n(R.elecTotal,1)} kW · ${n(R.amps(R.elecTotal),0)} A at 400 V</td></tr>
    <tr><td>Winter supply temperature</td><td>${n(R.ts_w,1)} °C</td></tr>
    <tr><td>Humidifier</td><td>${R.humKgh>0?n(R.humKgh,1)+' kg/h'+(S.humid==='steam'?' ('+n(R.humkW,1)+' kW steam)':' (adiabatic)'):'not required'}</td></tr>
@@ -1291,17 +1320,18 @@ function refresh(){ try{
   try{ RES.alt=solve(Object.assign({},S,{rhMode:S.rhMode==='band'?'setpoint':'band'})); }catch(x){RES.alt=null;}
   buildResults(RES);}catch(e){console.error(e);} }
 function saveFile(){
-  const blob=new Blob([JSON.stringify({app:'adi-room-first',schema:1,job:document.getElementById('jobName').value,airUnit:AU,state:S},null,1)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({app:'adi-room-first',schema:1,job:document.getElementById('jobName').value,airUnit:AU,waterUnit:WU,state:S},null,1)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=(document.getElementById('jobName').value||'room-first')+'.json'; a.click();
 }
 function loadFile(e){const f=e.target.files[0]; if(!f)return; const r=new FileReader();
   r.onload=()=>{try{const d=JSON.parse(r.result); if(d.state)Object.assign(S,d.state);
     if(d.airUnit&&AIRUNITS[d.airUnit]){AU=d.airUnit; syncUnitButtons();}
+    if(d.waterUnit&&WATERUNITS[d.waterUnit]){WU=d.waterUnit; syncWaterButtons();}
     document.getElementById('jobName').value=d.job||''; buildInputs(); refresh();}catch(x){alert('That file is not a RoomFirst save.');}};
   r.readAsText(f);}
 window.addEventListener('beforeprint',()=>document.querySelectorAll('details').forEach(d=>d.open=true));
-syncUnitButtons(); buildInputs(); refresh();
+syncUnitButtons(); syncWaterButtons(); buildInputs(); refresh();
 </script>
 
 </body>
