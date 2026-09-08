@@ -20,12 +20,34 @@
   --ink:#E6EEF6; --ink2:#B9CBDD; --muted:#7E97AE;
   --brand:#2E90FF; --cyan:#2E90FF; --cool:#5FC8F5; --amber:#F2A03F; --blue:#5FC8F5; --violet:#A98BFF;
   --ok:#4ED08A; --warn:#F5C44B; --bad:#FF6B6B;
+  --on-brand:#04121F;            /* text sitting on a brand-coloured button */
+  --rule:rgba(27,51,72,.55);     /* hairlines between fields and table rows */
+  --header-bg:rgba(8,19,31,.94); --bar-bg:rgba(9,20,32,.97);
+  --track:#0B1A28; --fill:#1C3550;
+  --res1:#10263A; --res2:#0C1B29;
+  --sv1:#17202B; --sv2:#0E1E2E; --svline:#5A4520;
+  --brand-wash:rgba(46,144,255,.07); --bad-wash:rgba(255,107,107,.08); --frost-wash:rgba(95,200,245,.10);
   --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
   --cond:'IBM Plex Sans Condensed','IBM Plex Sans',system-ui,sans-serif;
   --body:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
+}
+:root[data-theme=light]{
+  --ground:#EEF2F7; --panel:#FFFFFF; --panel2:#F1F5F9; --line:#D3DCE6; --line2:#AFBFD0;
+  --ink:#0F1F2E; --ink2:#2C4356; --muted:#5B7186;
+  --brand:#1B6FD6; --cyan:#1B6FD6; --cool:#1785B8; --amber:#B8690A; --blue:#1785B8; --violet:#6A4BD1;
+  --ok:#1E8E52; --warn:#9C7500; --bad:#CC3B33;
+  --on-brand:#FFFFFF;
+  --rule:rgba(15,31,46,.12);
+  --header-bg:rgba(238,242,247,.94); --bar-bg:rgba(255,255,255,.97);
+  --track:#E3EAF2; --fill:#B9CFE8;
+  --res1:#FFFFFF; --res2:#EEF3F9;
+  --sv1:#FFF8EC; --sv2:#FFFFFF; --svline:#E0B872;
+  --brand-wash:rgba(27,111,214,.08); --bad-wash:rgba(204,59,51,.08); --frost-wash:rgba(23,133,184,.10);
+  color-scheme:light;
 }
 *{box-sizing:border-box}
-html,body{margin:0;padding:0}
+html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}
 body{
   background:var(--ground); color:var(--ink); font-family:var(--body);
   font-size:15px; line-height:1.45; -webkit-text-size-adjust:100%;
@@ -36,7 +58,7 @@ a{color:var(--cyan)}
 
 /* ---------- shell ---------- */
 header.top{
-  position:sticky; top:0; z-index:40; background:rgba(8,19,31,.94);
+  position:sticky; top:0; z-index:40; background:var(--header-bg);
   backdrop-filter:blur(10px); border-bottom:1px solid var(--line);
 }
 .topin{max-width:1400px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
@@ -57,11 +79,21 @@ header.top{
 .modesw button{background:transparent;border:0;border-right:1px solid var(--line2);color:var(--ink2);
   font-family:var(--cond);font-size:12.5px;letter-spacing:.03em;padding:7px 12px;cursor:pointer;white-space:nowrap}
 .modesw button:last-child{border-right:0}
-.modesw button[aria-pressed=true]{background:var(--brand);color:#04121F;font-weight:700}
+.modesw button[aria-pressed=true]{background:var(--brand);color:var(--on-brand);font-weight:700}
 .modesw button[data-m=site][aria-pressed=true]{background:var(--amber)}
 .unitwrap{display:flex;align-items:center;gap:7px}
 .unitlbl{font-family:var(--cond);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
 .modesw.unitsw button{font-family:var(--mono);font-size:12px;padding:7px 9px}
+/* inline unit toggle — sits next to an input or a result and switches the same global unit */
+.itog{display:inline-flex;border:1px solid var(--line2);border-radius:5px;overflow:hidden;vertical-align:middle;flex:0 0 auto}
+.itog button{background:transparent;border:0;border-right:1px solid var(--line2);color:var(--muted);
+  font-family:var(--mono);font-size:10.5px;padding:3px 6px;cursor:pointer;white-space:nowrap;line-height:1.2;
+  text-transform:none;letter-spacing:0}
+.itog button:last-child{border-right:0}
+.itog button[aria-pressed=true]{background:var(--brand);color:var(--on-brand);font-weight:600}
+.itog button:hover{color:var(--ink)}
+.itog button[aria-pressed=true]:hover{color:var(--on-brand)}
+.tbtn.theme{font-family:var(--body);font-size:14px;padding:5px 9px;text-transform:none;letter-spacing:0}
 .sl{display:flex;align-items:center;gap:12px;padding:9px 0}
 .sl label{flex:0 0 108px;font-size:13px;color:var(--ink2)}
 .sl input[type=range]{flex:1;accent-color:var(--brand);height:26px;background:transparent}
@@ -72,6 +104,7 @@ header.top{
 .senseg .v{font-family:var(--mono);font-size:17px;font-weight:600;margin-top:2px}
 
 .wrap{max-width:1400px;margin:0 auto;padding:16px}
+.leftcol,.rightcol{min-width:0}
 @media(min-width:1080px){
   .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start}
   .rightcol{position:sticky;top:64px;max-height:calc(100vh - 84px);overflow-y:auto;padding-right:4px}
@@ -79,8 +112,8 @@ header.top{
 
 /* ---------- cards ---------- */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden}
-.svcard{border-color:#5A4520;background:linear-gradient(180deg,#17202B,#0E1E2E)}
-.svcard>summary .step{color:var(--amber);border-color:#5A4520}
+.svcard{border-color:var(--svline);background:linear-gradient(180deg,var(--sv1),var(--sv2))}
+.svcard>summary .step{color:var(--amber);border-color:var(--svline)}
 .card>summary{list-style:none;cursor:pointer;padding:13px 15px;display:flex;align-items:baseline;gap:10px}
 .card>summary::-webkit-details-marker{display:none}
 .card>summary::after{content:'+';margin-left:auto;color:var(--muted);font-family:var(--mono);font-size:17px}
@@ -92,10 +125,11 @@ header.top{
 .cbody{padding:12px 15px 16px}
 
 /* ---------- fields ---------- */
-.field{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(27,51,72,.5)}
+.field{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--rule);flex-wrap:wrap}
 .field:last-child{border-bottom:0}
-.field label{flex:1;font-size:13.5px;color:var(--ink2)}
+.field label{flex:1 1 160px;font-size:13.5px;color:var(--ink2)}
 .field .u{font-family:var(--mono);font-size:11px;color:var(--muted);width:44px;text-align:left}
+.field .u.wide{width:auto}
 input[type=number],input[type=text],select{
   background:var(--panel2);border:1px solid var(--line2);color:var(--ink);
   font-family:var(--mono);font-size:14px;padding:6px 8px;border-radius:6px;width:96px;text-align:right;
@@ -110,11 +144,11 @@ input:disabled{opacity:.35}
   font-family:var(--cond);font-size:12.5px;padding:7px 11px;cursor:pointer
 }
 .seg button:last-child{border-right:0}
-.seg button[aria-pressed=true]{background:var(--cyan);color:#04121F;font-weight:700}
+.seg button[aria-pressed=true]{background:var(--cyan);color:var(--on-brand);font-weight:700}
 .grp{margin:10px 0 4px;font-family:var(--cond);font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 
 /* ---------- results ---------- */
-.rescard{background:linear-gradient(180deg,#10263A,#0C1B29);border:1px solid var(--line2)}
+.rescard{background:linear-gradient(180deg,var(--res1),var(--res2));border:1px solid var(--line2)}
 .big{font-family:var(--mono);font-weight:600;letter-spacing:-.02em}
 .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--line)}
 .kpi>div{background:var(--panel);padding:11px 12px}
@@ -126,40 +160,54 @@ input:disabled{opacity:.35}
 .ladder{padding:4px 0 2px}
 .lrow{display:grid;grid-template-columns:112px 1fr 96px;align-items:center;gap:9px;padding:4px 0}
 .lname{font-family:var(--cond);font-size:12.5px;color:var(--ink2);text-align:right;letter-spacing:.02em}
-.ltrack{height:16px;background:#0B1A28;border:1px solid var(--line);border-radius:3px;position:relative;overflow:hidden}
-.lfill{position:absolute;left:0;top:0;bottom:0;background:#1C3550;transition:width .35s cubic-bezier(.2,.7,.3,1)}
-.lrow.win .lfill{background:linear-gradient(90deg,#1E5FA8,var(--cyan))}
+.ltrack{height:16px;background:var(--track);border:1px solid var(--line);border-radius:3px;position:relative;overflow:hidden}
+.lfill{position:absolute;left:0;top:0;bottom:0;background:var(--fill);transition:width .35s cubic-bezier(.2,.7,.3,1)}
+.lrow.win .lfill{background:linear-gradient(90deg,var(--line2),var(--cyan))}
 .lrow.win .lname{color:var(--cyan);font-weight:700}
 .lval{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:right;white-space:nowrap}
 .lrow.win .lval{color:var(--ink)}
 .lrow.na .ltrack{opacity:.35}
-.lrow.short .lfill{background:linear-gradient(90deg,#7A2733,#FF6B6B)}
+.lrow.short .lfill{background:linear-gradient(90deg,var(--line2),var(--bad))}
 .lrow.short .lname{color:var(--bad)}
-.lrow.sel .lfill{background:linear-gradient(90deg,#2A5A8C,#E6EEF6)}
+.lrow.sel .lfill{background:linear-gradient(90deg,var(--line2),var(--ink))}
 .lrow.sel .lname{color:var(--ink);font-weight:700}
 .lmark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
 .driver{
-  margin-top:10px;padding:10px 12px;border-left:3px solid var(--cyan);background:rgba(46,144,255,.07);
+  margin-top:10px;padding:10px 12px;border-left:3px solid var(--cyan);background:var(--brand-wash);
   font-size:13.5px;border-radius:0 7px 7px 0
 }
 .driver b{color:var(--cyan)}
+.driver.bad{border-left-color:var(--bad);background:var(--bad-wash);color:var(--ink)}
+.driver.frost{border-left-color:var(--cool);background:var(--frost-wash)}
+.driver.frost b{color:var(--cool)}
 
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
 table.st{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px}
 table.st th{font-family:var(--cond);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:5px 4px;border-bottom:1px solid var(--line2);font-weight:600}
 table.st th:first-child,table.st td:first-child{text-align:left}
-table.st td{padding:5px 4px;border-bottom:1px solid rgba(27,51,72,.6);text-align:right;white-space:nowrap}
-table.st td:first-child{font-family:var(--body);font-size:12.5px;color:var(--ink2)}
+table.st td{padding:5px 4px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}
+table.st td:first-child{font-family:var(--body);font-size:12.5px;color:var(--ink2);white-space:normal}
+table.st td.mut{white-space:normal}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
-.chk{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid rgba(27,51,72,.6);font-size:13px;align-items:flex-start}
+.chk{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:13px;align-items:flex-start}
 .chk:last-child{border-bottom:0}
 .chk .ic{font-family:var(--mono);font-size:12px;font-weight:600;min-width:16px}
 .chk .tx b{font-family:var(--cond);letter-spacing:.02em}
-.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.mut{color:var(--muted)}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.mut{color:var(--muted)}.frostc{color:var(--cool)}
 .pill{display:inline-block;font-family:var(--cond);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:20px;border:1px solid currentColor;margin-left:6px}
+.rowhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:2px 0 8px}
+.rowhead .k{font-family:var(--cond);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.rowhead .sp{flex:1}
+.moist{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:8px}
+.moist>div{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--panel2)}
+.moist>div.on{border-color:var(--cool);background:var(--frost-wash)}
+.moist .k{font-family:var(--cond);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.moist .v{font-family:var(--mono);font-size:17px;font-weight:600;margin-top:2px}
+.moist .n{font-size:11px;color:var(--muted);margin-top:1px}
 
 /* sticky bottom bar */
 .bar{
-  position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(9,20,32,.97);
+  position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--bar-bg);
   border-top:1px solid var(--line2);backdrop-filter:blur(10px);
   padding:8px 14px calc(8px + env(safe-area-inset-bottom));
 }
@@ -170,19 +218,26 @@ table.st td:first-child{font-family:var(--body);font-size:12.5px;color:var(--ink
 .bstat{margin-left:auto;flex:0 0 auto}
 
 svg{display:block;width:100%;height:auto}
-.schem{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.schem svg{min-width:720px}
+/* At "Fit" the schematic scales to the card so the page never needs a sideways scroll.
+   The larger sizes scroll inside their own box, never the page. */
+.schem{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.schem svg{min-width:0}
 .zoomrow{display:flex;align-items:center;gap:6px;padding:0 4px 8px;font-family:var(--cond);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .zoomrow button{background:var(--panel2);border:1px solid var(--line2);color:var(--ink2);font-family:var(--cond);font-size:11.5px;padding:4px 10px;border-radius:5px;cursor:pointer}
-.zoomrow button[aria-pressed=true]{background:var(--brand);color:#04121F;font-weight:700;border-color:var(--brand)}
+.zoomrow button[aria-pressed=true]{background:var(--brand);color:var(--on-brand);font-weight:700;border-color:var(--brand)}
 .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:var(--muted);padding-top:8px;font-family:var(--cond)}
 .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px}
 .note{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:10px}
 .foot{max-width:1400px;margin:0 auto;padding:6px 16px 20px;font-size:11.5px;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:60;background:var(--panel);color:var(--ink);
+  border:1px solid var(--line2);border-radius:8px;padding:9px 14px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.25);
+  opacity:0;pointer-events:none;transition:opacity .25s}
+.toast.show{opacity:1}
 
 @media print{
+  :root{color-scheme:light}
   body{background:#fff;color:#000;padding:0}
-  header.top,.bar,.card:not([open]) .cbody{display:none}
+  header.top,.bar,.card:not([open]) .cbody,.toast,.itog,.zoomrow{display:none}
   .card{break-inside:avoid;border-color:#999}
   .wrap{display:block;max-width:none}
 }
@@ -190,9 +245,14 @@ svg{display:block;width:100%;height:auto}
 </style>
 </head>
 <body>
+<script>
+/* Apply the saved theme before first paint so there is no flash. Falls back to the OS preference. */
+(function(){try{const t=localStorage.getItem('rf-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+  document.documentElement.dataset.theme=t;}catch(e){}})();
+</script>
 <header class="top"><div class="topin">
   <div class="brand">Room<span>First</span></div>
-  <input class="jobname" id="jobName" placeholder="Project / room reference" value="">
+  <input class="jobname" id="jobName" placeholder="Project / room reference" value="" oninput="jobChanged()">
   <div class="modesw" id="modesw">
     <button data-m="design" aria-pressed="true" onclick="setMode('design')">Design</button>
     <button data-m="site" aria-pressed="false" onclick="setMode('site')">Site check</button>
@@ -213,8 +273,17 @@ svg{display:block;width:100%;height:auto}
       <button data-wu="m3h" aria-pressed="false" onclick="setWaterUnit('m3h')" title="cubic metres per hour">m³/h</button>
     </div>
   </div>
+  <div class="unitwrap">
+    <span class="unitlbl">Moisture</span>
+    <div class="modesw unitsw" id="moistunitsw" role="group" aria-label="Moisture removal units">
+      <button data-mu="lh" aria-pressed="true"  onclick="setMoistUnit('lh')" title="litres per hour">l/h</button>
+      <button data-mu="ls" aria-pressed="false" onclick="setMoistUnit('ls')" title="litres per second">l/s</button>
+    </div>
+  </div>
+  <button class="tbtn theme" id="themeBtn" onclick="toggleTheme()" title="Switch between day and night colours" aria-label="Switch colour mode">☾</button>
   <button class="tbtn" onclick="saveFile()">Save</button>
   <button class="tbtn" onclick="document.getElementById('loadFile').click()">Open</button>
+  <button class="tbtn" id="pdfBtn" onclick="exportPDF()" title="A4 PDF report of this page">PDF</button>
   <button class="tbtn" onclick="window.print()">Print</button>
   <input type="file" id="loadFile" accept=".json" style="display:none" onchange="loadFile(event)">
 </div></header>
@@ -226,9 +295,11 @@ svg{display:block;width:100%;height:auto}
 <div class="foot" id="foot"></div>
 
 <div class="bar"><div class="barin" id="barin"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
 /*CORE-START*/
 const RD=287.055, RATIO=0.621945;
+const W_MIN=1e-6;   // 0.001 g/kg — air at -50°C saturates at 0.02 g/kg, so the floor has to sit well under that
 function psatPa(t){const T=t+273.15;
   if(t>=0){const C8=-5800.2206,C9=1.3914993,C10=-0.048640239,C11=4.1764768e-5,C12=-1.4452093e-8,C13=6.5459673;
     return Math.exp(C8/T+C9+C10*T+C11*T*T+C12*T*T*T+C13*Math.log(T));}
@@ -243,10 +314,45 @@ function dewpoint(W,P){const pw=P*Math.max(W,1e-7)/(RATIO+Math.max(W,1e-7));
   let lo=-80,hi=99; for(let i=0;i<70;i++){const m=(lo+hi)/2; if(psatPa(m)/1000<pw) lo=m; else hi=m;} return (lo+hi)/2;}
 function wetbulb(t,W,P){let lo=-80,hi=t;
   for(let i=0;i<70;i++){const m=(lo+hi)/2,Ws=Wsat(m,P);
-    const Wc=((2501-2.326*m)*Ws-1.006*(t-m))/(2501+1.86*t-4.186*m);
+    // ASHRAE psychrometer relation; the ice form applies once the wick is frozen (m < 0)
+    const Wc = m>=0 ? ((2501-2.326*m)*Ws-1.006*(t-m))/(2501+1.86*t-4.186*m)
+                    : ((2830-0.24*m)*Ws-1.006*(t-m))/(2830+1.86*t-2.1*m);
     if(Wc>W) hi=m; else lo=m;} return (lo+hi)/2;}
 function volSpec(t,W,P){return RD*(t+273.15)*(1+1.607858*W)/(P*1000);}
 function st(t,W,P){return{t:t,W:W,h:enth(t,W),rh:RHfromW(t,W,P),dp:dewpoint(W,P),wb:wetbulb(t,W,P),v:volSpec(t,W,P)};}
+/* Mixed-air state from enthalpy and moisture. If the two streams mix to something supersaturated
+   (warm humid fresh air into a cold store, say) the mixture settles on the saturation curve at the
+   same enthalpy and the excess drops out as fog or frost in the mixing section. Returns that excess. */
+function mixState(h,W,P){
+  const t=tFromH(h,W);
+  if(W<=Wsat(t,P)) return {s:st(t,W,P),fog:0};
+  let lo=-80,hi=t+1;
+  for(let i=0;i<60;i++){const m=(lo+hi)/2; if(enth(m,Wsat(m,P))<h) lo=m; else hi=m;}
+  const ts=(lo+hi)/2, Ws=Wsat(ts,P);
+  return {s:st(ts,Ws,P),fog:Math.max(0,W-Ws)};
+}
+
+/* ---- frost. Below 0°C the coil surface is iced: removed moisture is held on the fins rather than
+   running to the drain, and the coil has to reject the heat of fusion plus the sub-cooling of the ice.
+   Same model as the Enthalpy tool: c_ice(T)=2.108+0.0077·T kJ/kg·K averaged over 0 → T, fusion 333.6 kJ/kg. */
+const H_FUSION=333.6;
+function iceCp(t){return 2.108+0.0077*Math.min(t,0);}
+function iceCpMean(t){return (iceCp(0)+iceCp(Math.min(t,0)))/2;}
+/* kW the coil must reject per kg/s of frost deposited at surface temperature t (freeze + cool the ice) */
+function frostKWperKgs(t){const tt=Math.min(t,0); return H_FUSION+iceCpMean(tt)*(-tt);}
+/* frost held after `hours` of running at kg/s, and what it takes to clear it */
+function frostAccum(kgs,t,hours){
+  const massKg=Math.max(0,kgs*hours*3600), tt=Math.min(t,0);
+  const sensKJ=massKg*iceCpMean(tt)*(-tt), meltKJ=massKg*H_FUSION;
+  return {massKg,meltwaterL:massKg,defrostKWh:(sensKJ+meltKJ)/3600,sensKWh:sensKJ/3600,meltKWh:meltKJ/3600};
+}
+/* room geometry — one set of numbers for the whole tool */
+function roomGeom(S){
+  const A=Math.max(1,S.roomArea), H=Math.max(0.1,S.roomHeight), r=Math.max(1,S.aspect||1);
+  const L=Math.sqrt(A*r), Wd=Math.sqrt(A/r), perim=2*(L+Wd);
+  const envAuto=2*A+perim*H;
+  return {A,H,L,W:Wd,perim,V:A*H,envAuto,env:S.envMode==='manual'?Math.max(1,S.envArea):envAuto};
+}
 
 const ACT={
  seated:{n:'Seated, at rest / desk',s:70,l:0.045},
@@ -263,7 +369,7 @@ function fluid(g){ // glycol % ethylene
 
 function solve(S){
   const P=S.pressure, R={warnings:[]};
-  const V=Math.max(1,S.roomArea*S.roomHeight);
+  const G=roomGeom(S), V=Math.max(1,G.V);
   const act=ACT[S.occAct]||ACT.seated;
   const occSens=S.occ*act.s/1000, occLat=S.occ*act.l;
   let qs = (S.sensMode==='total') ? S.qsTotal
@@ -287,7 +393,7 @@ function solve(S){
   const fanRiseFor=(m,W)=> S.fanMode==='kw' ? S.fanHeatKW/Math.max(0.02,m*(1.006+1.86*W)) : fanRise;
 
   // fixed airflow requirements (l/s)
-  const leakA=Math.max(1e-5,S.envArea*(LEAK[S.leakClass]||LEAK.avg).r/10000);
+  const leakA=Math.max(1e-5,G.env*(LEAK[S.leakClass]||LEAK.avg).r/10000);
   const recover=(src,exh_ls,fa_ls)=>{
     if(S.hrType==='none'||exh_ls<=0||fa_ls<=0) return {s:src,ratio:0};
     const ratio=Math.min(1,exh_ls/fa_ls);
@@ -305,8 +411,8 @@ function solve(S){
 
   // iterate
   let flow=Math.max(freshBase,press_ls,minach_ls,50);
-  let ts=S.roomT-8, Ws=Math.max(0.0005,W_r-0.002);
-  let cand={},E={},m_oa=0,mda=0,oa_ls=0,latImposs=false,exh_ls=0,FA={ratio:0},FAs=OA;
+  let ts=S.roomT-8, Ws=Math.max(W_MIN,W_r*0.8);
+  let cand={},E={},m_oa=0,mda=0,oa_ls=0,latImposs=false,exh_ls=0,FA={ratio:0},FAs=OA,fogKgs=0;
   for(let i=0;i<150;i++){
     const vs=(S.flowRef==='return')?volSpec(S.roomT,W_r,P):volSpec(ts,Ws,P);
     mda=flow/1000/vs;
@@ -316,7 +422,7 @@ function solve(S){
     m_oa=oa_ls/1000/FAs.v;
     const m_ra=Math.max(0,mda-m_oa);
     const W_E=(m_oa*FAs.W+m_ra*W_r)/mda, h_E=(m_oa*FAs.h+m_ra*h_r)/mda;
-    E=st(tFromH(h_E,W_E),W_E,P);
+    const mx=mixState(h_E,W_E,P); E=mx.s; fogKgs=mx.fog*mda;
     const adpMin=coolBase+coolApp, WadpMin=Wsat(adpMin,P);
     const WoffMin = WadpMin>=E.W ? E.W : E.W-S.CF*(E.W-WadpMin);
     R.WoffMin=WoffMin;
@@ -334,7 +440,7 @@ function solve(S){
     else flow=flow+(nf-flow)*0.6;
     const mda2=flow/1000/vs;
     ts=S.roomT-qs/(mda2*(1.006+1.86*Ws));
-    Ws=Math.max(0.0002,Wdeh-(latKgh/3600)/mda2);
+    Ws=Math.max(W_MIN,Wdeh-(latKgh/3600)/mda2);
   }
   flow=Math.round(flow*10)/10;
   const vs=(S.flowRef==='return')?volSpec(S.roomT,W_r,P):volSpec(ts,Ws,P); mda=flow/1000/vs;
@@ -356,7 +462,8 @@ function solve(S){
   if(adp<adpMin-0.02){adpOK=false; adp=adpMin;}
   const wet = adp<E.dp-0.02;
   const t_off = E.t-CF*(E.t-adp);
-  const W_off = wet ? Math.max(0.0002,E.W-CF*(E.W-Wsat(adp,P))) : E.W;
+  // the straight-line coil process can dip through the fog region near a cold ADP — hold it on the curve
+  const W_off = Math.min(wet ? Math.max(W_MIN,E.W-CF*(E.W-Wsat(adp,P))) : E.W, Wsat(t_off,P));
   const t_ADP=adp, W_ADP=Wsat(adp,P);
   const off=st(t_off,W_off,P);
   const t_sup_nore=t_off+fanRise;
@@ -370,10 +477,14 @@ function solve(S){
   const W_roomAct=supply.W+latKgh/3600/mda;
   const roomAct=st(t_roomAct,W_roomAct,P);
 
-  const cond=Math.max(0,mda*(E.W-W_off));
-  const total=Math.max(0,mda*(E.h-off.h)-cond*4.186*Math.max(t_off,0));
-  const sens=mda*cpm*(E.t-t_off);
+  const cond=Math.max(0,mda*(E.W-W_off));            // kg/s of water leaving the airstream
+  const frosting=wet&&adp<0&&cond>0;                  // surface below 0°C: it comes off as ice, not water
+  const frostKgs=frosting?cond:0, drainKgs=frosting?0:cond;
+  const frostKW=frosting?frostKgs*frostKWperKgs(adp):0;
+  const total=Math.max(0,mda*(E.h-off.h)+frostKW-drainKgs*4.186*Math.max(t_off,0));
+  const sens=Math.min(total,Math.max(0,mda*cpm*(E.t-t_off)));
   const lat=Math.max(0,total-sens);
+  const frostAcc=frostAccum(frostKgs,adp,Math.max(0.1,S.defrostH||8));
   const fanKW=S.fanMode==='kw'?S.fanHeatKW:mda*(1.006+1.86*W_off)*fanRise;
   const netCool=Math.max(0,total-fanKW);
   const oaLoad=m_oa*(FAs.h-h_r);
@@ -396,7 +507,7 @@ function solve(S){
   const FAw=recover(OW,exh_ls,oa_ls).s;
   const m_oa_w=oa_ls/1000/FAw.v, m_ra_w=Math.max(0,mda_w-m_oa_w);
   const W_Ew=(m_oa_w*FAw.W+m_ra_w*W_r)/mda_w, h_Ew=(m_oa_w*FAw.h+m_ra_w*h_r)/mda_w;
-  const Ew=st(tFromH(h_Ew,W_Ew),W_Ew,P);
+  const Ew=mixState(h_Ew,W_Ew,P).s;
   const qNet=S.winterLoss-S.winterGains;
   const cpw=1.006+1.86*W_Ew;
   const fanRiseW=fanRiseFor(mda_w,W_Ew);
@@ -432,7 +543,7 @@ function solve(S){
   const FAsh=recover(SH,exh_ls,oa_ls).s;
   const m_oa_s=oa_ls/1000/FAsh.v, mda_s=mda, m_ra_s=Math.max(0,mda_s-m_oa_s);
   const W_Es=(m_oa_s*FAsh.W+m_ra_s*W_r)/mda_s, h_Es=(m_oa_s*FAsh.h+m_ra_s*h_r)/mda_s;
-  const Es=st(tFromH(h_Es,W_Es),W_Es,P);
+  const Es=mixState(h_Es,W_Es,P).s;
   const qs_s=qs*S.shLoad/100;
   const ts_s=S.roomT-qs_s/(mda_s*(1.006+1.86*W_Es));
   const toff_s=ts_s-fanRiseFor(mda_s,W_Es);
@@ -443,14 +554,15 @@ function solve(S){
   const W_room_s=W_off_s+latKgh/3600/mda_s;
   const shRHroom=RHfromW(S.roomT,W_room_s,P)*100;
 
-  return {V,qs,ql,latKgh,WoffMin:R.WoffMin,occSens,occLat,room,OA,OW,SH,E,Es,Ew,off,supply,supplyReq,roomAct,
+  return {V,G,qs,ql,latKgh,WoffMin:R.WoffMin,occSens,occLat,room,OA,OW,SH,E,Es,Ew,off,supply,supplyReq,roomAct,
     flow,mda,oa_ls,cand,driver,latImposs,fanRise,wet,mode,govern,t_ADP,W_ADP,adpOK,adpMin,adpReq_T,adpReq_M,
-    total,sens,lat,cond:cond*3600,reheat,oaLoad,chwFlow,lphwFlow,faceArea,rows,CF,
+    total,sens,lat,cond:cond*3600,condKgs:cond,frosting,frostKgs,drainKgs,frostKW,frostAcc,fogKgh:fogKgs*3600,
+    reheat,oaLoad,chwFlow,lphwFlow,faceArea,rows,CF,
     fanRise,dxAbs,reheatElec,heatElec,hpAbs,elecTotal,amps,shortfall,reheatFree,adpMinSrc:coolBase,
     exh_ls,FAs,hrRatio:FA.ratio,hrSaved,fanKW,netCool,W_hi,W_lo,Wdeh,leakOut,roomPa,leakA,occSensKW:occSens,act,
     ts_w:ts_w_cap,dtHeat,heatShort,humKgh,humkW,heater,preheatAdb,lphwHeatFlow,qNet,
     shRHroom,W_room_s,leak_ls,press_ls,minach_ls,freshBase,
-    ach:flow/1000*3600/V, oaPct:oa_ls/flow*100, dtSupply:S.roomT-supply.t,
+    ach:flow/1000*3600/V, achFresh:oa_ls/1000*3600/V, oaPct:oa_ls/flow*100, dtSupply:S.roomT-supply.t,
     sfpCheck:S.fanMode==='sfp'?S.sfp:null};
 }
 /*CORE-END*/
@@ -491,6 +603,12 @@ function setAirUnit(u){
   if(!AIRUNITS[u]||u===AU) return;
   AU=u; syncUnitButtons(); buildInputs(); refresh();
 }
+/* Inline l/s ↔ m³/h toggle. Every one of these drives the same global unit, so flipping any of them
+   flips the whole page — inputs, results, schematic and the bar — and nothing can be read in two units at once. */
+function auTog(){
+  return `<span class="itog" role="group" aria-label="Air volume unit">`+
+    ['lps','m3h'].map(k=>`<button type="button" data-tu="${k}" aria-pressed="${AU===k}" onclick="setAirUnit('${k}')">${AIRUNITS[k].n}</button>`).join('')+`</span>`;
+}
 
 /* ---------------- water flow units ----------------
    Chilled water and LPHW volumetric flows. Kept separate from the air
@@ -513,6 +631,62 @@ function setWaterUnit(u){
   if(!WATERUNITS[u]||u===WU) return;
   WU=u; syncWaterButtons(); refresh();
 }
+function wuTog(){
+  return `<span class="itog" role="group" aria-label="Water flow unit">`+
+    ['lps','m3h'].map(k=>`<button type="button" aria-pressed="${WU===k}" onclick="setWaterUnit('${k}')">${WATERUNITS[k].n}</button>`).join('')+`</span>`;
+}
+
+/* ---------------- moisture removal units ----------------
+   Condensate, frost and any other water taken out of the air. Held internally in
+   kg/h (1 kg of water = 1 litre); shown in litres per hour or litres per second. */
+const MOISTUNITS={
+  lh:{n:'l/h', f:1,      d:2},
+  ls:{n:'l/s', f:1/3600, d:4}
+};
+let MU='lh';
+function muDef(){return MOISTUNITS[MU]||MOISTUNITS.lh;}
+function muN(){return muDef().n;}
+function mvv(kgh){const v=kgh*muDef().f; return n(v,Math.abs(v)>=100?muDef().d-1:muDef().d);}   // number only
+function mu(kgh){return mvv(kgh)+' '+muN();}                                                       // number + unit
+function muOther(kgh){const k=MU==='lh'?'ls':'lh', v=kgh*MOISTUNITS[k].f; return n(v,Math.abs(v)>=100?MOISTUNITS[k].d-1:MOISTUNITS[k].d)+' '+MOISTUNITS[k].n;}
+function muBoth(kgh){return mu(kgh)+' · '+muOther(kgh);}
+function syncMoistButtons(){
+  document.querySelectorAll('#moistunitsw button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mu===MU)));
+}
+function setMoistUnit(u){
+  if(!MOISTUNITS[u]||u===MU) return;
+  MU=u; syncMoistButtons(); refresh();
+}
+function muTog(){
+  return `<span class="itog" role="group" aria-label="Moisture unit">`+
+    ['lh','ls'].map(k=>`<button type="button" aria-pressed="${MU===k}" onclick="setMoistUnit('${k}')">${MOISTUNITS[k].n}</button>`).join('')+`</span>`;
+}
+
+/* ---------------- day / night ----------------
+   CSS does the page through custom properties on <html>. The SVG drawings are built as strings,
+   so they take their colours from pal(); FORCE_LIGHT lets the PDF render on white whatever the screen is set to. */
+const PAL={
+  dark:{ink:'#E6EEF6',ink2:'#B9CBDD',muted:'#7E97AE',brand:'#2E90FF',cool:'#5FC8F5',amber:'#F2A03F',violet:'#A98BFF',ok:'#4ED08A',bad:'#FF6B6B',
+        grid:'#17304A',rhLine:'#1E3E5C',rhLabel:'#55738F',outline:'#08131F',rule:'#1B3348',boxFill:'rgba(16,32,48,.92)',ahuFill:'rgba(11,26,40,.92)',
+        roomFill:'rgba(46,144,255,.07)',supFill:'rgba(46,144,255,.10)',okWash:'rgba(78,208,138,.12)',badWash:'rgba(255,107,107,.12)',tolBox:'rgba(46,144,255,.10)',
+        idle:'#7A5A2A',ahuLine:'#2A4F72',bg:'#0E1E2E'},
+  light:{ink:'#0F1F2E',ink2:'#2C4356',muted:'#5B7186',brand:'#1B6FD6',cool:'#1785B8',amber:'#B8690A',violet:'#6A4BD1',ok:'#1E8E52',bad:'#CC3B33',
+        grid:'#E1E8F0',rhLine:'#C3D0DE',rhLabel:'#7F94A8',outline:'#FFFFFF',rule:'#D3DCE6',boxFill:'rgba(255,255,255,.92)',ahuFill:'rgba(241,245,249,.95)',
+        roomFill:'rgba(27,111,214,.06)',supFill:'rgba(27,111,214,.10)',okWash:'rgba(30,142,82,.12)',badWash:'rgba(204,59,51,.12)',tolBox:'rgba(27,111,214,.10)',
+        idle:'#C9A15A',ahuLine:'#AFBFD0',bg:'#FFFFFF'}
+};
+let FORCE_LIGHT=false;
+function theme(){return document.documentElement.dataset.theme==='light'?'light':'dark';}
+function pal(){return PAL[FORCE_LIGHT?'light':theme()];}
+function applyTheme(t){
+  document.documentElement.dataset.theme=t;
+  try{localStorage.setItem('rf-theme',t);}catch(e){}
+  const b=document.getElementById('themeBtn'); if(b){b.textContent=t==='light'?'☀':'☾'; b.title=t==='light'?'Switch to night colours':'Switch to day colours';}
+  const m=document.querySelector('meta[name=theme-color]'); if(m) m.content=t==='light'?'#EEF2F7':'#08131F';
+}
+function toggleTheme(){applyTheme(theme()==='light'?'dark':'light'); refresh();}
+function toast(msg,ms){const t=document.getElementById('toast'); if(!t)return; t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),ms||3200);}
 
 /* ---------------- input schema ---------------- */
 const SEC=[
@@ -524,7 +698,16 @@ const SEC=[
  {k:'rhMode',l:'How humidity is controlled',seg:[['band','Keep it inside the band'],['setpoint','Hold the setpoint exactly']],v:'band',
   h:'Holding an exact RH means the coil must dry the air whenever anything adds moisture, which forces a much deeper coil and then reheat to put the temperature back. Keeping it inside the band only dries when the room would otherwise go over the top of your tolerance. Use the setpoint only where the process genuinely demands it.'},
  {k:'roomArea',l:'Floor area',u:'m²',v:400,st:10},
- {k:'roomHeight',l:'Height to ceiling / to extract',u:'m',v:3,st:0.1},
+ {k:'roomHeight',l:'Height to ceiling / to extract',u:'m',v:3,st:0.1,
+  h:s=>{const g=roomGeom(s); return `Room volume ${n(g.V,0)} m³. Every air change figure in the tool is worked on this one volume.`;}},
+ {k:'aspect',l:'Room proportions — length to width',u:': 1',v:1.5,st:0.25,
+  h:s=>{const g=roomGeom(s); return `Only used to work out how much wall there is. 1 is square, 2 is twice as long as it is wide. At ${n(s.aspect,2)} : 1 the room is about ${n(g.L,1)} m × ${n(g.W,1)} m, ${n(g.perim,0)} m of wall.`;}},
+ {k:'envMode',l:'Envelope area — walls, ceiling, floor, doors',seg:[['auto','Work it out from the room'],['manual','I know it']],v:'auto',
+  h:s=>{const g=roomGeom(s); return s.envMode==='auto'
+    ? `Floor and ceiling ${n(2*g.A,0)} m² plus walls ${n(g.perim*g.H,0)} m² = <b>${n(g.envAuto,0)} m²</b>. This is the shell the leakage and pressurisation are worked on below.`
+    : `Using ${n(s.envArea,0)} m². From the room dimensions above it would be ${n(g.envAuto,0)} m².`;}},
+ {k:'envArea',l:'Envelope area',u:'m²',v:600,st:10,show:s=>s.envMode==='manual'},
+ {k:'leakClass',l:'How tight is the shell',sel:LEAK,v:'avg'},
 ]},
 {id:'loads',mode:'design',badge:'02',n:'What is in the room',s:'Heat and moisture the air has to remove',f:[
  {k:'occ',l:'People at design occupancy',u:'no.',v:20,st:1},
@@ -557,9 +740,8 @@ const SEC=[
   h:'Fresh air has to leave somewhere. Whatever you do not spill at the unit goes out through the fabric and pressurises the room. Fresh − exhaust − extract = the air pushed through the shell.'},
  {k:'exhPct',l:'Exhaust',u:'%',v:0,st:5,show:s=>s.exhMode==='pct'},
  {k:'exhFixed',l:'Exhaust',u:'l/s',au:true,v:0,st:50,show:s=>s.exhMode==='lps'},
- {k:'envArea',l:'Envelope area — walls, ceiling, floor, doors',u:'m²',v:600,st:10},
- {k:'leakClass',l:'How tight is the shell',sel:LEAK,v:'avg'},
- {k:'pressMode',l:'Room pressure',seg:[['none','Not controlled'],['leak','From leakage'],['ach','As air changes']],v:'none'},
+ {k:'pressMode',l:'Room pressure',seg:[['none','Not controlled'],['leak','From leakage'],['ach','As air changes']],v:'none',
+  h:s=>{const g=roomGeom(s); return `Leakage is worked on the ${n(g.env,0)} m² envelope and the shell tightness set in section 01, so the room only has to be described once.`;}},
  {k:'pressDP',l:'Pressure to hold above adjacent space',u:'Pa',v:15,st:5,show:s=>s.pressMode==='leak'},
  {k:'pressACH',l:'Pressurisation allowance',u:'ac/h',v:1,st:0.5,show:s=>s.pressMode==='ach'},
  {k:'minACH',l:'Minimum air change rate for this space type',u:'ac/h',v:0,st:1,h:'0 if not imposed. Cleanrooms, kitchens and labs usually are: EU GMP grade D ≈ 20, grade C ≈ 40.'},
@@ -568,9 +750,9 @@ const SEC=[
 ]},
 {id:'out',mode:'design',badge:'04',n:'Outside and off-design',s:'The conditions the plant has to cope with',f:[
  {k:'sitePreset',l:'Location preset',sel:{custom:{n:'Custom / type my own'},bham:{n:'Birmingham'},lon:{n:'London'},manc:{n:'Manchester'},edin:{n:'Edinburgh'}},v:'custom'},
- {k:'osDB',l:'Summer design dry bulb',u:'°C',v:28,st:0.5},
- {k:'osRH',l:'Summer design RH at that dry bulb',u:'%',v:60,st:1,h:'Size the coil on the dehumidification case — high moisture with its own coincident dry bulb — not peak dry bulb with peak wet bulb together. Confirm against CIBSE Guide A / the current TRY-DSY set.'},
- {k:'owDB',l:'Winter design dry bulb',u:'°C',v:-4,st:0.5},
+ {k:'osDB',l:'Summer design dry bulb',u:'°C',v:35,st:0.5,mn:-50,mx:50},
+ {k:'osRH',l:'Summer design RH at that dry bulb',u:'%',v:60,st:1,h:'Size the coil on the dehumidification case — high moisture with its own coincident dry bulb — not peak dry bulb with peak wet bulb together. 35°C at 60% is 22 g/kg and a 28°C wet bulb, well beyond anything a UK design year gives — check the coincident RH against CIBSE Guide A / the current TRY-DSY set rather than pairing peak with peak.'},
+ {k:'owDB',l:'Winter design dry bulb',u:'°C',v:-4,st:0.5,mn:-50,mx:50},
  {k:'owRH',l:'Winter design RH',u:'%',v:90,st:1},
  {k:'shDB',l:'Off-design check — dry bulb',u:'°C',v:18,st:0.5},
  {k:'shRH',l:'Off-design check — RH',u:'%',v:85,st:1,h:'The mild damp morning is where humidity control usually fails: there is no sensible load to make the coil run, so the room drifts wet.'},
@@ -583,13 +765,16 @@ const SEC=[
  {k:'hrEffS',l:'Sensible efficiency',u:'%',v:65,st:5,show:s=>s.hrType!=='none'},
  {k:'hrEffL',l:'Latent (moisture) efficiency',u:'%',v:55,st:5,show:s=>s.hrType==='wheel'},
  {k:'coolSrc',l:'Cooling',seg:[['chw','Chilled water'],['dx','DX — direct expansion']],v:'chw'},
- {k:'chwF',l:'Chilled water flow',u:'°C',v:6,st:0.5,show:s=>s.coolSrc==='chw'},
- {k:'chwR',l:'Chilled water return',u:'°C',v:12,st:0.5,show:s=>s.coolSrc==='chw'},
+ {k:'chwF',l:'Chilled water / brine flow',u:'°C',v:6,st:0.5,mn:-50,mx:50,show:s=>s.coolSrc==='chw',
+  h:'Goes down to -50°C for glycol or brine circuits on cold stores and freezers. Below 0°C the coil surface frosts — the tool then shows the moisture as ice held on the coil and adds the defrost duty.'},
+ {k:'chwR',l:'Chilled water / brine return',u:'°C',v:12,st:0.5,mn:-50,mx:50,show:s=>s.coolSrc==='chw'},
  {k:'approach',l:'Coil approach — ADP above water flow temp',u:'K',v:1.5,st:0.5,show:s=>s.coolSrc==='chw',h:'The apparatus dew point can never sit on the water temperature. 1.5–2.5 K is realistic for a well-selected coil.'},
  {k:'glycol',l:'Glycol in the chilled circuit',u:'%',v:0,st:5,show:s=>s.coolSrc==='chw'},
- {k:'evapT',l:'Saturated evaporating temperature',u:'°C',v:5,st:0.5,show:s=>s.coolSrc==='dx',
-  h:'DX gets you a colder surface than chilled water, so it dehumidifies harder. Below about 1°C the coil will ice up at part load.'},
+ {k:'evapT',l:'Saturated evaporating temperature',u:'°C',v:5,st:0.5,mn:-50,mx:50,show:s=>s.coolSrc==='dx',
+  h:'DX gets you a colder surface than chilled water, so it dehumidifies harder. Goes down to -50°C for low-temperature evaporators. Below about 1°C the coil will ice up at part load; below 0°C at design it runs frosted and the moisture is shown as ice, not condensate.'},
  {k:'dxApproach',l:'Coil approach above evaporating temperature',u:'K',v:2,st:0.5,show:s=>s.coolSrc==='dx'},
+ {k:'defrostH',l:'Run time between defrosts',u:'h',v:8,st:0.5,show:s=>(s.coolSrc==='dx'?s.evapT+s.dxApproach:s.chwF+s.approach)<0,
+  h:'The coil surface can go below 0°C, so if it frosts the tool works out how much ice builds up over this period, the meltwater released and the energy the defrost has to put in.'},
  {k:'dxEER',l:'Cooling EER at design condition',u:'',v:3.2,st:0.1,show:s=>s.coolSrc==='dx',h:'Used only to work out the electrical load, not the cooling capacity.'},
  {k:'CF',l:'Coil contact factor',u:'',v:0.9,st:0.01,h:'Off-coil air is NOT saturated. On a conventional AHU coil at 2.5 m/s: 4 row ≈ 0.82, 6 row ≈ 0.93, 8 row ≈ 0.96. Inclined close-finned coils in close-control units do better for the same row count, because the face area is larger and the face velocity lower. Where you have a manufacturer selection, back the figure out of their on-coil and off-coil conditions rather than using a rule of thumb. This one number decides how dry you can get.'},
  {k:'faceVel',l:'Coil face velocity',u:'m/s',v:2.5,st:0.1},
@@ -613,15 +798,16 @@ const SEC=[
  {k:'svFlow',l:'Measured airflow',u:'l/s',au:true,v:1000,st:10},
  {k:'svFlowRef',l:'Measured at',seg:[['supply','Supply duct'],['return','Return / fan inlet']],v:'supply',
   h:'Volumetric flow depends on density, so it matters where you took it. Everything below scales directly off this figure — 10% out here is 10% out on every kilowatt.'},
- {k:'svSupT',l:'Supply air temperature',u:'°C',v:12,st:0.1},
+ {k:'svSupT',l:'Supply air temperature',u:'°C',v:12,st:0.1,mn:-50,mx:50},
  {k:'svSupRH',l:'Supply air humidity',u:'%',v:90,st:1},
- {k:'svRetT',l:'Return air temperature',u:'°C',v:22,st:0.1},
+ {k:'svRetT',l:'Return air temperature',u:'°C',v:22,st:0.1,mn:-50,mx:50},
  {k:'svRetRH',l:'Return air humidity',u:'%',v:50,st:1,
   h:'Return air is the room condition. Take it in the return path before any fresh air joins it.'},
 ]},
 {id:'survey2',badge:'S',mode:'site',n:'The room and the unit',s:'Only what this check needs — nothing here feeds the design side',f:[
- {k:'svArea',l:'Floor area',u:'m²',v:0,st:5,h:'Only used for the air change rate. Leave at 0 if you do not need it.'},
+ {k:'svArea',l:'Floor area',u:'m²',v:0,st:5,h:'Only used for the air change rates. Leave at 0 if you do not need them.'},
  {k:'svHeight',l:'Height',u:'m',v:3,st:0.1},
+ {k:'svFresh',l:'Fresh air measured at the unit',u:'l/s',au:true,v:0,st:10,h:'Optional. Gives the fresh-air change rate alongside the total air change rate. Leave at 0 if you did not measure it.'},
  {k:'svFanKW',l:'Supply fan heat',u:'kW',v:0,st:0.1,
   h:'From the unit data sheet, or the gap between its gross and net capacity. Used to work the off-coil condition back from the supply air. Leave at 0 and the off-coil is taken as the supply condition.'},
  {k:'svCoil',l:'On-coil condition',seg:[['ret','Same as return — full recirculation'],['on','I measured it']],v:'ret'},
@@ -647,10 +833,12 @@ SEC.forEach(sec=>sec.f.forEach(f=>S[f.k]=f.v));
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 function n(x,d=1){if(!isFinite(x))return '—';const v=Math.round(x*10**d)/10**d;return v.toLocaleString('en-GB',{minimumFractionDigits:d,maximumFractionDigits:d});}
 
+function hintText(f){return typeof f.h==='function'?f.h(S):f.h;}
 function applyVisibility(){
   SEC.forEach(sec=>sec.f.forEach(f=>{
     const el=document.querySelector('.fw[data-k="'+f.k+'"]');
     if(el) el.style.display=(f.show&&!f.show(S))?'none':'';
+    if(el&&typeof f.h==='function'){const hh=el.querySelector('.hint'); if(hh) hh.innerHTML=hintText(f);}
   }));
 }
 let MODE='design';
@@ -673,11 +861,13 @@ function buildInputs(){
         h+=`<div class="field"><label>${f.l}</label><select data-k="${f.k}">`+
           Object.keys(f.sel).map(k=>`<option value="${k}" ${S[f.k]===k?'selected':''}>${f.sel[k].n}</option>`).join('')+`</select></div>`;
       } else if(f.au){
-        h+=`<div class="field"><label>${f.l}</label><input type="number" step="${auStep(f.st)}" data-k="${f.k}" data-au="1" value="${auVal(S[f.k])}"><span class="u">${auN()}</span></div>`;
+        h+=`<div class="field"><label>${f.l}</label><input type="number" step="${auStep(f.st)}" data-k="${f.k}" data-au="1" value="${auVal(S[f.k])}">`+
+           (AU==='m3s'?`<span class="u">${auN()}</span>`:'')+auTog()+`</div>`;
       } else {
-        h+=`<div class="field"><label>${f.l}</label><input type="number" step="${f.st}" data-k="${f.k}" value="${S[f.k]}"><span class="u">${f.u||''}</span></div>`;
+        const lim=(f.mn!==undefined?` min="${f.mn}"`:'')+(f.mx!==undefined?` max="${f.mx}"`:'');
+        h+=`<div class="field"><label>${f.l}</label><input type="number" step="${f.st}"${lim} data-k="${f.k}" value="${S[f.k]}"><span class="u">${f.u||''}</span></div>`;
       }
-      if(f.h) h+=`<div class="hint">${f.h}</div>`;
+      if(f.h) h+=`<div class="hint">${hintText(f)}</div>`;
       h+=`</div>`;
     });
     if(sec.id==='sense') h+=senseWidget();
@@ -687,7 +877,7 @@ function buildInputs(){
   if(MODE==='sense') bindSense();
   el.querySelectorAll('input[type=number]').forEach(i=>{
     i.addEventListener('input',e=>{const raw=parseFloat(e.target.value)||0;
-      S[e.target.dataset.k]=e.target.dataset.au?frU(raw):raw; refresh();});
+      S[e.target.dataset.k]=e.target.dataset.au?frU(raw):raw; applyVisibility(); refresh();});
     i.addEventListener('wheel',()=>{if(document.activeElement===i) i.blur();},{passive:true});
     i.setAttribute('inputmode','decimal');
   });
@@ -715,15 +905,21 @@ const DRV={sensible:['Sensible heat','the heat in the room and the coldest suppl
  minach:['Minimum air change','the air change rate imposed on this type of space']};
 
 let SCHZ=1;
-function zoomSchem(z){SCHZ=z;const s=document.querySelector('.schem svg');if(s)s.style.minWidth=(720*z)+'px';
+function schemMinW(z){return z>1?(720*z)+'px':'0';}   // Fit = scale to the card; larger sizes scroll inside the card only
+function zoomSchem(z){SCHZ=z;const s=document.querySelector('.schem svg');if(s)s.style.minWidth=schemMinW(z);
   document.querySelectorAll('.zoomrow button').forEach(b=>b.setAttribute('aria-pressed',parseFloat(b.dataset.z)===z));}
+/* Airflow slider is logarithmic: 10 l/s up to 100 000 m³/h (27 778 l/s) on one track. */
+const SF_MIN=10, SF_MAX=100000/3.6;
+const sfPos=lps=>Math.round(1000*Math.log(Math.max(SF_MIN,Math.min(SF_MAX,lps))/SF_MIN)/Math.log(SF_MAX/SF_MIN));
+const sfVal=pos=>SF_MIN*Math.pow(SF_MAX/SF_MIN,pos/1000);
 function senseWidget(){
   return `<div id="senseBox">
-   <div class="sl"><label>Dry bulb</label><input type="range" id="sT" min="-10" max="50" step="0.5" value="${SENSE.t}"><div class="rv" id="sTv">${SENSE.t.toFixed(1)} °C</div></div>
+   <div class="sl"><label>Dry bulb</label><input type="range" id="sT" min="-50" max="50" step="0.5" value="${SENSE.t}"><div class="rv" id="sTv">${SENSE.t.toFixed(1)} °C</div></div>
    <div class="sl"><label>Relative humidity</label><input type="range" id="sR" min="5" max="100" step="1" value="${SENSE.rh}"><div class="rv" id="sRv">${SENSE.rh} %</div></div>
-   <div class="sl"><label>Cool it to</label><input type="range" id="sC" min="-10" max="50" step="0.5" value="${SENSE.c}"><div class="rv" id="sCv">${SENSE.c.toFixed(1)} °C</div></div>
-   <div class="sl"><label>Airflow</label><input type="range" id="sF" min="${toU(50)}" max="${toU(6000)}" step="${toU(50)}" value="${toU(SENSE.f)}"><div class="rv" id="sFv">${fu(SENSE.f)}</div></div>
-   <div class="hint">Drag the first two to set an air condition. The third cools that same air and shows what happens to it — nothing here touches the design or the site check.</div>
+   <div class="sl"><label>Cool it to</label><input type="range" id="sC" min="-50" max="50" step="0.5" value="${SENSE.c}"><div class="rv" id="sCv">${SENSE.c.toFixed(1)} °C</div></div>
+   <div class="sl"><label>Airflow</label><input type="range" id="sF" min="0" max="1000" step="1" value="${sfPos(SENSE.f)}"><div class="rv" id="sFv">${fu(SENSE.f)}</div></div>
+   <div class="hint">Drag the first two to set an air condition — anything from -50°C to +50°C. The third cools that same air and shows what happens to it; below 0°C the moisture comes out as frost rather than water. Airflow runs from 10 l/s to 100 000 m³/h. Nothing here touches the design or the site check.</div>
+   <div class="rowhead" style="padding-top:10px"><span class="k">Airflow in</span>${auTog()}<span class="k" style="margin-left:8px">Moisture in</span>${muTog()}</div>
    <div class="senseg" id="sOut"></div></div>`;
 }
 const SENSE={t:22,rh:50,c:12,f:1000};
@@ -732,7 +928,7 @@ function bindSense(){
     e.addEventListener('input',()=>{SENSE.t=parseFloat(document.getElementById('sT').value);
       SENSE.rh=parseFloat(document.getElementById('sR').value);
       SENSE.c=parseFloat(document.getElementById('sC').value);
-      SENSE.f=frU(parseFloat(document.getElementById('sF').value)); drawSense();});});
+      SENSE.f=sfVal(parseFloat(document.getElementById('sF').value)); drawSense();});});
   drawSense();
 }
 function senseCalc(){
@@ -742,12 +938,18 @@ function senseCalc(){
   const b=st(SENSE.c,Math.min(W2,Wsat(SENSE.c,P)),P);
   const drop=Math.max(0,(a.W-b.W)*1000);
   const mda=SENSE.f/1000/a.v;
-  return {a,b,cooled,drop,dh:a.h-b.h,mda,
-    waterKgh:mda*(a.W-b.W)*3600, kW:mda*(a.h-b.h),
-    sensKW:mda*(1.006+1.86*b.W)*(a.t-b.t), latKW:mda*(a.h-b.h)-mda*(1.006+1.86*b.W)*(a.t-b.t)};
+  const condKgs=Math.max(0,mda*(a.W-b.W));
+  const frosting=cooled&&SENSE.c<0&&condKgs>0;
+  const frostKW=frosting?condKgs*frostKWperKgs(SENSE.c):0;
+  const drainKW=frosting?0:condKgs*4.186*Math.max(SENSE.c,0);
+  const kW=Math.max(0,mda*(a.h-b.h)+frostKW-drainKW);
+  const sensKW=Math.min(kW,Math.max(0,mda*(1.006+1.86*b.W)*(a.t-b.t)));
+  return {a,b,cooled,drop,dh:a.h-b.h,mda,frosting,frostKW,
+    waterKgh:condKgs*3600, frostKgh:frosting?condKgs*3600:0, drainKgh:frosting?0:condKgs*3600,
+    kW, sensKW, latKW:Math.max(0,kW-sensKW), frostAcc:frostAccum(frosting?condKgs:0,SENSE.c,8)};
 }
 function drawSense(){
-  const {a,b,cooled,drop,dh,mda,waterKgh,kW,sensKW,latKW}=senseCalc();
+  const Q=senseCalc(), {a,b,cooled,drop,dh,mda,waterKgh,kW,sensKW,latKW,frosting}=Q;
   const g=document.getElementById('sOut'); if(!g) return;
   document.getElementById('sTv').textContent=SENSE.t.toFixed(1)+' °C';
   document.getElementById('sRv').textContent=SENSE.rh+' %';
@@ -755,34 +957,56 @@ function drawSense(){
   document.getElementById('sFv').textContent=fu(SENSE.f);
   g.innerHTML=
    `<div><div class="k">Moisture</div><div class="v">${n(a.W*1000,2)}</div><div class="k">g/kg dry air</div></div>
-    <div><div class="k">Dew point</div><div class="v">${n(a.dp,1)}</div><div class="k">°C</div></div>
+    <div><div class="k">${a.dp<0?'Frost point':'Dew point'}</div><div class="v">${n(a.dp,1)}</div><div class="k">°C</div></div>
     <div><div class="k">Wet bulb</div><div class="v">${n(a.wb,1)}</div><div class="k">°C</div></div>
     <div><div class="k">Enthalpy</div><div class="v">${n(a.h,1)}</div><div class="k">kJ/kg</div></div>
     <div><div class="k">Density</div><div class="v">${n(1/a.v,3)}</div><div class="k">kg/m³</div></div>
-    <div><div class="k">Air mass flow</div><div class="v">${n(mda,3)}</div><div class="k">kg/s · ${n(mda*3600,0)} kg/h</div></div>
-    <div><div class="k">Cooled to ${n(SENSE.c,1)}°C</div><div class="v ${cooled?'':'mut'}">${n(b.rh*100,0)}%</div><div class="k">${cooled?'saturated — water drops out':'no condensation'}</div></div>
+    <div><div class="k">Air mass flow</div><div class="v">${n(mda,3)}</div><div class="k">kg/s · ${n(mda*3600,0)} kg/h · ${fother(SENSE.f)}</div></div>
+    <div><div class="k">Cooled to ${n(SENSE.c,1)}°C</div><div class="v ${cooled?'':'mut'}">${n(b.rh*100,0)}%</div><div class="k">${cooled?(frosting?'saturated — moisture freezes on the surface':'saturated — water drops out'):'no condensation'}</div></div>
     <div><div class="k">Moisture removed</div><div class="v ${drop>0?'':'mut'}">${n(drop,2)}</div><div class="k">g/kg dry air</div></div>
-    <div><div class="k">Water removed</div><div class="v ${drop>0?'':'mut'}">${n(waterKgh,2)}</div><div class="k">kg/h · ${n(waterKgh,1)} litres/h</div></div>
-    <div><div class="k">Cooling duty</div><div class="v">${n(kW,2)}</div><div class="k">kW at ${fu(SENSE.f)}</div></div>
+    <div class="${frosting?'':''}"><div class="k">${frosting?'Held as frost':'Water to drain'}</div><div class="v ${drop>0?(frosting?'frostc':''):'mut'}">${mvv(waterKgh)}</div><div class="k">${muN()} · ${muOther(waterKgh)}${frosting?' · ice at '+n(SENSE.c,1)+'°C':''}</div></div>
+    ${frosting?`<div><div class="k">Frost after 8 h</div><div class="v frostc">${n(Q.frostAcc.massKg,1)}</div><div class="k">kg · ${n(Q.frostAcc.defrostKWh,2)} kWh to defrost</div></div>`:''}
+    <div><div class="k">Cooling duty</div><div class="v">${n(kW,2)}</div><div class="k">kW at ${fu(SENSE.f)}${frosting?' · incl. '+n(Q.frostKW,2)+' kW frost':''}</div></div>
     <div><div class="k">Sensible / latent</div><div class="v">${n(sensKW,1)}/${n(latKW,1)}</div><div class="k">kW · ${n(dh,1)} kJ/kg</div></div>`;
   const c=document.getElementById('senseChart'); if(c) c.innerHTML=senseChart(a,b,cooled);
 }
-function senseChart(a,b,cooled){
-  const X0=48,X1=590,Y0=280,Y1=18,tA=-10,tB=50,wB=30,P=S.pressure;
+/* ---- psychrometric chart scaffolding shared by the three charts.
+   The axes grow to take in whatever is being plotted, so a -50°C freezer or a 35°C/60% day both sit on the paper. */
+const FM='IBM Plex Mono, ui-monospace, Menlo, monospace', FC='IBM Plex Sans Condensed, IBM Plex Sans, system-ui, sans-serif';
+function chartRange(states,tA0,tB0,wB0){
+  const ts=states.map(s=>s.t).filter(isFinite), ws=states.map(s=>s.W*1000).filter(isFinite);
+  let tA=Math.min(tA0,Math.floor((Math.min(...ts)-3)/5)*5), tB=Math.max(tB0,Math.ceil((Math.max(...ts)+3)/5)*5);
+  tA=Math.max(-60,tA); tB=Math.min(60,tB);
+  const wB=Math.min(60,Math.max(wB0,Math.ceil((Math.max(...ws)*1.08)/4)*4));
+  const tStep=(tB-tA)>70?10:5, wStep=wB>36?8:4;
+  return {tA,tB,wB,tStep,wStep};
+}
+function psyGrid(X0,X1,Y0,Y1,r,P){
+  const C=pal(), {tA,tB,wB,tStep,wStep}=r;
   const px=t=>X0+(t-tA)/(tB-tA)*(X1-X0), py=w=>Y0-w/wB*(Y0-Y1);
   let g='';
-  for(let t=tA;t<=tB;t+=10) g+=`<line x1="${px(t)}" y1="${Y0}" x2="${px(t)}" y2="${Y1}" stroke="#17304A"/><text x="${px(t)}" y="${Y0+15}" fill="#7E97AE" font-size="10" text-anchor="middle" font-family="IBM Plex Mono">${t}</text>`;
-  for(let w=0;w<=wB;w+=5) g+=`<line x1="${X0}" y1="${py(w)}" x2="${X1}" y2="${py(w)}" stroke="#17304A"/><text x="${X0-7}" y="${py(w)+3}" fill="#7E97AE" font-size="10" text-anchor="end" font-family="IBM Plex Mono">${w}</text>`;
+  for(let t=tA;t<=tB+1e-9;t+=tStep) g+=`<line x1="${px(t)}" y1="${Y0}" x2="${px(t)}" y2="${Y1}" stroke="${C.grid}"/><text x="${px(t)}" y="${Y0+15}" fill="${C.muted}" font-size="10" text-anchor="middle" font-family="${FM}">${t}</text>`;
+  for(let w=0;w<=wB+1e-9;w+=wStep) g+=`<line x1="${X0}" y1="${py(w)}" x2="${X1}" y2="${py(w)}" stroke="${C.grid}"/><text x="${X0-7}" y="${py(w)+3}" fill="${C.muted}" font-size="10" text-anchor="end" font-family="${FM}">${w}</text>`;
   [1,.8,.6,.4,.2].forEach(rh=>{let d='';
-    for(let t=tA;t<=tB;t+=0.5){const w=WfromRH(t,rh,P)*1000; if(w>wB)break; d+=(d?'L':'M')+px(t)+' '+py(w);}
-    g+=`<path d="${d}" fill="none" stroke="${rh===1?'#2E90FF':'#1E3E5C'}" stroke-width="${rh===1?2:1}"/>`;
-    if(rh<1){const tt=tA+rh*44+6,w=WfromRH(tt,rh,P)*1000; if(w<wB-1) g+=`<text x="${px(tt)+3}" y="${py(w)-3}" fill="#55738F" font-size="9" font-family="IBM Plex Mono">${rh*100}%</text>`;}});
-  g+=`<line x1="${px(a.t)}" y1="${py(a.W*1000)}" x2="${px(b.t)}" y2="${py(b.W*1000)}" stroke="#F2A03F" stroke-width="1.8" stroke-dasharray="${cooled?'0':'4 3'}"/>`;
-  g+=`<line x1="${px(a.dp)}" y1="${py(a.W*1000)}" x2="${px(a.t)}" y2="${py(a.W*1000)}" stroke="#5FC8F5" stroke-width="1" stroke-dasharray="2 3"/>`;
-  [[a,'#E6EEF6','AIR'],[b,'#F2A03F','COOLED']].forEach(p=>{const x=px(p[0].t),y=py(Math.min(p[0].W*1000,wB));
-    g+=`<circle cx="${x}" cy="${y}" r="5" fill="${p[1]}" stroke="#08131F" stroke-width="1.5"/><text x="${x+9}" y="${y-7}" fill="${p[1]}" font-size="11" font-weight="600" font-family="IBM Plex Mono">${p[2]}</text>`;});
-  g+=`<text x="${(X0+X1)/2}" y="${Y0+32}" fill="#7E97AE" font-size="10.5" text-anchor="middle" font-family="IBM Plex Sans Condensed" letter-spacing="1">DRY BULB °C</text>`;
-  g+=`<text x="14" y="${(Y0+Y1)/2}" fill="#7E97AE" font-size="10.5" text-anchor="middle" font-family="IBM Plex Sans Condensed" letter-spacing="1" transform="rotate(-90 14 ${(Y0+Y1)/2})">MOISTURE g/kg</text>`;
+    for(let t=tA;t<=tB;t+=0.5){const w=WfromRH(t,rh,P)*1000; if(w>wB)break; d+=(d?'L':'M')+px(t).toFixed(1)+' '+py(w).toFixed(1);}
+    g+=`<path d="${d}" fill="none" stroke="${rh===1?C.brand:C.rhLine}" stroke-width="${rh===1?2:1}"/>`;
+    if(rh<1){ // label each curve where it is still on the paper
+      let tt=tB; while(tt>tA&&WfromRH(tt,rh,P)*1000>wB-1) tt-=1;
+      tt=Math.min(tt,tA+(tB-tA)*(0.35+rh*0.55));
+      const w=WfromRH(tt,rh,P)*1000; if(w<wB-1&&w>0.3) g+=`<text x="${px(tt)+3}" y="${py(w)-3}" fill="${C.rhLabel}" font-size="9" font-family="${FM}">${rh*100}%</text>`;}});
+  if(tA<0) g+=`<line x1="${px(0)}" y1="${Y0}" x2="${px(0)}" y2="${Y1}" stroke="${C.cool}" stroke-dasharray="2 4" opacity=".7"/><text x="${px(0)+3}" y="${Y1+10}" fill="${C.cool}" font-size="9" font-family="${FC}" letter-spacing="1">FROST</text>`;
+  g+=`<text x="${(X0+X1)/2}" y="${Y0+32}" fill="${C.muted}" font-size="10.5" text-anchor="middle" font-family="${FC}" letter-spacing="1">DRY BULB °C</text>`;
+  g+=`<text x="14" y="${(Y0+Y1)/2}" fill="${C.muted}" font-size="10.5" text-anchor="middle" font-family="${FC}" letter-spacing="1" transform="rotate(-90 14 ${(Y0+Y1)/2})">MOISTURE g/kg</text>`;
+  return {g,px,py,wB};
+}
+function senseChart(a,b,cooled){
+  const C=pal(), P=S.pressure, X0=48,X1=590,Y0=280,Y1=18;
+  const r=chartRange([a,b],-10,50,30), F=psyGrid(X0,X1,Y0,Y1,r,P), {px,py,wB}=F;
+  let g=F.g;
+  g+=`<line x1="${px(a.t)}" y1="${py(a.W*1000)}" x2="${px(b.t)}" y2="${py(b.W*1000)}" stroke="${C.amber}" stroke-width="1.8" stroke-dasharray="${cooled?'0':'4 3'}"/>`;
+  g+=`<line x1="${px(a.dp)}" y1="${py(a.W*1000)}" x2="${px(a.t)}" y2="${py(a.W*1000)}" stroke="${C.cool}" stroke-width="1" stroke-dasharray="2 3"/>`;
+  [[a,C.ink,'AIR'],[b,C.amber,'COOLED']].forEach(p=>{const x=px(p[0].t),y=py(Math.min(p[0].W*1000,wB));
+    g+=`<circle cx="${x}" cy="${y}" r="5" fill="${p[1]}" stroke="${C.outline}" stroke-width="1.5"/><text x="${x+9}" y="${y-7}" fill="${p[1]}" font-size="11" font-weight="600" font-family="${FM}">${p[2]}</text>`;});
   return `<svg viewBox="0 0 620 320" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
 }
 function senseNotes(){
@@ -818,15 +1042,19 @@ function surveyCalc(){
   const shr=Math.abs(total)>0.05?sens/total:1;
   const V=S.svArea*S.svHeight;
   const ach=V>0?S.svFlow/1000*3600/V:null;
+  const achFresh=V>0&&S.svFresh>0?S.svFresh/1000*3600/V:null;
   const on=(S.svCoil==='on')?st(S.svOnT,WfromRH(S.svOnT,Math.min(0.999,S.svOnRH/100),P),P):ret;
   const fanRise=S.svFanKW>0?S.svFanKW/(mda*(1.006+1.86*sup.W)):0;
   const off=st(sup.t-fanRise,sup.W,P);
   const cond=Math.max(0,mda*(on.W-off.W));
-  const coilTot=Math.max(0,mda*(on.h-off.h)-cond*4.186*Math.max(off.t,0));
-  const coilSens=mda*(1.006+1.86*on.W)*(on.t-off.t);
-  const coilLat=Math.max(0,coilTot-coilSens);
   const adp=adpFrom(on,off,P), cf=adp!==null?(on.t-off.t)/Math.max(0.1,on.t-adp):null;
-  return {sup,ret,on,off,mda,total,sens,lat,moist,shr,ach,V,cond:cond*3600,coilTot,coilSens,coilLat,adp,cf,fanRise,
+  const frosting=adp!==null&&adp<0&&cond>0;
+  const frostKW=frosting?cond*frostKWperKgs(adp):0;
+  const coilTot=Math.max(0,mda*(on.h-off.h)+frostKW-(frosting?0:cond*4.186*Math.max(off.t,0)));
+  const coilSens=Math.min(coilTot,Math.max(0,mda*(1.006+1.86*on.W)*(on.t-off.t)));
+  const coilLat=Math.max(0,coilTot-coilSens);
+  return {sup,ret,on,off,mda,total,sens,lat,moist,shr,ach,achFresh,V,cond:cond*3600,condKgs:cond,frosting,frostKW,
+    frostAcc:frostAccum(frosting?cond:0,adp||0,8),coilTot,coilSens,coilLat,adp,cf,fanRise,
     dTs:ret.t-sup.t,dW:(ret.W-sup.W)*1000,vol:mda*(S.svFlowRef==='return'?ret.v:sup.v)};
 }
 function surveyChecks(Q){
@@ -844,16 +1072,19 @@ function surveyChecks(Q){
   else if(Q.moist<0.05) push('ok','No measurable moisture gain in the room',
     'Supply and return sit at the same moisture content, so nothing in the space is adding water and the coil has no latent work to do.');
   else push('ok','Moisture is being added in the room',
-    `${n(Q.moist,2)} kg/h, worth ${n(Q.lat,2)} kW. At steady state the coil must remove the same amount, so you should see roughly ${n(Q.moist,1)} litres an hour at the drain. If you do not, one of these readings is wrong.`);
+    `${muBoth(Q.moist)}, worth ${n(Q.lat,2)} kW. At steady state the coil must remove the same amount, so you should see roughly ${mu(Q.moist)} ${Q.frosting?'building up as frost on the coil':'at the drain'}. If you do not, one of these readings is wrong.`);
   push('ok','Sensible heat ratio',
     `${n(Q.shr,2)} — ${Q.shr>0.98?'effectively all of the work is temperature, none is moisture':n((1-Q.shr)*100,0)+'% of the load is moisture removal'}.`);
   if(Q.sup.rh>0.97) push('warn','Supply humidity reading looks saturated',
     `${n(Q.sup.rh*100,0)}% RH. A sensor sitting in a wet supply stream reads high, and carryover off the coil does the same. Re-measure well downstream of the fan before relying on the latent split.`);
   if(Q.ach!==null&&Q.ach<2) push('warn','Low air change rate',`${n(Q.ach,1)} ac/h on ${n(Q.V,0)} m³.`);
+  else if(Q.ach!==null) push('ok','Air change rate',`${n(Q.ach,1)} ac/h total on ${n(Q.V,0)} m³${Q.achFresh!==null?', of which '+n(Q.achFresh,2)+' ac/h is fresh air ('+fu(S.svFresh)+')':''}.`);
   if(Q.cf!==null) push('ok','Contact factor measured off the coil',
     `${n(Q.cf,2)} with an apparatus dew point of ${n(Q.adp,1)}°C. A conventional AHU coil runs about 0.82 on 4 rows and 0.93 on 6; inclined close-finned coils in close-control units run higher for the same rows. Compare it against whatever the unit was originally selected at — well below that usually means a fouled coil, blocked fins, or more air across it than it was built for.`);
   else push('ok','The coil is running dry',
     'No moisture coming off it, so there is no apparatus dew point to measure. If the room needs drying, this is why it is not getting it.');
+  if(Q.frosting) push('warn','The coil surface is below freezing — this moisture is going on as frost',
+    `An apparatus dew point of ${n(Q.adp,1)}°C means the ${muBoth(Q.cond)} the coil is taking out is being held on the fins as ice, not running to the drain. That is ${n(Q.frostAcc.massKg,1)} kg of frost in 8 hours and ${n(Q.frostKW,2)} kW extra on the coil to freeze it. Expect airflow to fall and the off-coil to drift as the block ices; the unit needs a working defrost.`);
   if(S.svFanKW<=0) push('warn','No fan heat entered',
     'The off-coil condition is being taken as the supply condition, so the coil duty below is understated by whatever the fan puts in. Put the fan heat in on the card to the left and it will correct itself.');
   push('ok','Coil duty from these readings',
@@ -861,80 +1092,93 @@ function surveyChecks(Q){
   return C;
 }
 function surveyChart(Q){
-  const X0=52,X1=600,Y0=300,Y1=20,tA=0,tB=40,wB=20,P=S.pressure;
-  const px=t=>X0+(t-tA)/(tB-tA)*(X1-X0), py=w=>Y0-w/wB*(Y0-Y1);
-  let g='';
-  for(let t=tA;t<=tB;t+=5) g+=`<line x1="${px(t)}" y1="${Y0}" x2="${px(t)}" y2="${Y1}" stroke="#17304A"/><text x="${px(t)}" y="${Y0+15}" fill="#7E97AE" font-size="10" text-anchor="middle" font-family="IBM Plex Mono">${t}</text>`;
-  for(let w=0;w<=wB;w+=4) g+=`<line x1="${X0}" y1="${py(w)}" x2="${X1}" y2="${py(w)}" stroke="#17304A"/><text x="${X0-7}" y="${py(w)+3}" fill="#7E97AE" font-size="10" text-anchor="end" font-family="IBM Plex Mono">${w}</text>`;
-  [1,.8,.6,.4,.2].forEach(rh=>{let d='';
-    for(let t=tA;t<=tB;t+=0.5){const w=WfromRH(t,rh,P)*1000; if(w>wB)break; d+=(d?'L':'M')+px(t)+' '+py(w);}
-    g+=`<path d="${d}" fill="none" stroke="${rh===1?'#2E90FF':'#1E3E5C'}" stroke-width="${rh===1?2:1}"/>`;});
+  const C=pal(), P=S.pressure, X0=52,X1=600,Y0=300,Y1=20;
+  const r=chartRange([Q.on,Q.off,Q.sup,Q.ret],0,40,20), F=psyGrid(X0,X1,Y0,Y1,r,P), {px,py,wB}=F;
+  let g=F.g;
   if(S.svTargOn==='yes'){
     const x1=px(S.svTargT-S.svTargTol),x2=px(S.svTargT+S.svTargTol);
     const w1=WfromRH(S.svTargT,Math.max(.02,(S.svTargRH-S.svTargRHTol)/100),P)*1000,w2=WfromRH(S.svTargT,Math.min(.98,(S.svTargRH+S.svTargRHTol)/100),P)*1000;
-    g+=`<rect x="${x1}" y="${py(w2)}" width="${x2-x1}" height="${py(w1)-py(w2)}" fill="rgba(46,144,255,.10)" stroke="#2E90FF" stroke-dasharray="3 3"/>`;
+    g+=`<rect x="${x1}" y="${py(w2)}" width="${x2-x1}" height="${py(w1)-py(w2)}" fill="${C.tolBox}" stroke="${C.brand}" stroke-dasharray="3 3"/>`;
   }
-  const pts=[['ON',Q.on,'#A98BFF'],['OFF',Q.off,'#5FC8F5'],['SUPPLY',Q.sup,'#F2A03F'],['RETURN / ROOM',Q.ret,'#E6EEF6']];
-  g+=`<path d="M${px(Q.off.t)} ${py(Q.off.W*1000)}L${px(Q.sup.t)} ${py(Q.sup.W*1000)}L${px(Q.ret.t)} ${py(Q.ret.W*1000)}" fill="none" stroke="#F2A03F" stroke-width="1.8"/>`;
+  const pts=[['ON',Q.on,C.violet],['OFF',Q.off,C.cool],['SUPPLY',Q.sup,C.amber],['RETURN / ROOM',Q.ret,C.ink]];
+  g+=`<path d="M${px(Q.off.t)} ${py(Q.off.W*1000)}L${px(Q.sup.t)} ${py(Q.sup.W*1000)}L${px(Q.ret.t)} ${py(Q.ret.W*1000)}" fill="none" stroke="${C.amber}" stroke-width="1.8"/>`;
   pts.forEach(p=>{const x=px(p[1].t),y=py(Math.min(p[1].W*1000,wB));
-    g+=`<circle cx="${x}" cy="${y}" r="4.5" fill="${p[2]}" stroke="#08131F" stroke-width="1.5"/><text x="${x+8}" y="${y-6}" fill="${p[2]}" font-size="10.5" font-weight="600" font-family="IBM Plex Mono">${p[0]}</text>`;});
-  g+=`<text x="${(X0+X1)/2}" y="${Y0+32}" fill="#7E97AE" font-size="10.5" text-anchor="middle" font-family="IBM Plex Sans Condensed" letter-spacing="1">DRY BULB °C</text>`;
+    g+=`<circle cx="${x}" cy="${y}" r="4.5" fill="${p[2]}" stroke="${C.outline}" stroke-width="1.5"/><text x="${x+8}" y="${y-6}" fill="${p[2]}" font-size="10.5" font-weight="600" font-family="${FM}">${p[0]}</text>`;});
   return `<svg viewBox="0 0 620 344" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
+}
+/* rows shared by the on-screen table and the PDF: [label, value, note] */
+function surveyRows(Q){
+  const rows=[
+   ['Supply air mass flow',`${n(Q.mda,3)} kg/s`,`${n(Q.mda*3600,0)} kg/h dry air · ${fu(S.svFlow)} at ${S.svFlowRef==='return'?'return':'supply'} density`],
+   ['Measured airflow',fu(S.svFlow),fother(S.svFlow)],
+   ['Water carried IN with the supply air',mu(Q.mda*Q.sup.W*3600),`at ${n(Q.sup.W*1000,2)} g/kg`],
+   ['Water carried OUT with the return air',mu(Q.mda*Q.ret.W*3600),`at ${n(Q.ret.W*1000,2)} g/kg`],
+   ['Water added inside the room',mu(Q.moist),`${muOther(Q.moist)} — the difference: people, process, infiltration`],
+   ['Sensible heat gain',`${n(Q.sens,2)} kW`,`${n(Q.dTs,1)} K rise`],
+   ['Latent heat gain',`${n(Q.lat,2)} kW`,`${muBoth(Q.moist)} of water`],
+   ['Total heat gain',`${n(Q.total,2)} kW`,`SHR ${n(Q.shr,2)}`]];
+  if(Q.ach!==null) rows.push(['Air change rate — total',`${n(Q.ach,1)} ac/h`,`${fu(S.svFlow)} on ${n(Q.V,0)} m³`]);
+  if(Q.achFresh!==null) rows.push(['Air change rate — fresh air',`${n(Q.achFresh,2)} ac/h`,`${fu(S.svFresh)} fresh · ${n(S.svFresh/Math.max(1,S.svFlow)*100,0)}% of supply`]);
+  rows.push(['Coil duty (total / sens / lat)',`${n(Q.coilTot,1)} / ${n(Q.coilSens,1)} / ${n(Q.coilLat,1)} kW`,(S.svFanKW>0?'off-coil '+n(Q.off.t,1)+'°C':'fan heat not entered')+(Q.frosting?' · incl. '+n(Q.frostKW,2)+' kW to freeze the frost':'')]);
+  rows.push([Q.frosting?'Frost building on the coil':'Condensate off the coil',mu(Q.cond),Q.frosting?`${muOther(Q.cond)} · held as ice at ${n(Q.adp,1)}°C · ${n(Q.frostAcc.massKg,1)} kg in 8 h`:`${muOther(Q.cond)} at the drain`]);
+  rows.push(['Apparatus dew point / contact factor',Q.adp!==null?n(Q.adp,1)+'°C  ·  '+n(Q.cf,2):'dry coil','']);
+  return rows;
+}
+function stateRows6(list){return list.map(p=>`<tr><td>${p[0]}</td><td>${n(p[1].t,1)}</td><td>${n(p[1].rh*100,0)}</td><td>${n(p[1].W*1000,2)}</td><td>${n(p[1].h,1)}</td><td>${n(p[1].dp,1)}</td><td>${n(p[1].wb,1)}</td></tr>`).join('');}
+function surveyStates(Q){return [['On the coil'+(S.svCoil==='on'?'':' (= return)'),Q.on],['Off the coil (derived)',Q.off],['Supply into the room',Q.sup],['Return / the room',Q.ret]];}
+function moistureBlock(kgh,frosting,adp,acc,title){
+  return `<div class="rowhead"><span class="k">${title||'Moisture removed at the coil'}</span><span class="sp"></span>${muTog()}</div>
+   <div class="moist">
+    <div><div class="k">Removed from the air</div><div class="v">${mvv(kgh)}</div><div class="n">${muN()} · ${muOther(kgh)}</div></div>
+    <div class="${!frosting&&kgh>0?'on':''}"><div class="k">Liquid to drain</div><div class="v">${mvv(frosting?0:kgh)}</div><div class="n">${muN()} · ${n(frosting?0:kgh*24,0)} l/day</div></div>
+    <div class="${frosting?'on':''}"><div class="k">Held as frost</div><div class="v ${frosting?'frostc':''}">${mvv(frosting?kgh:0)}</div><div class="n">${muN()}${frosting?' · ice at '+n(adp,1)+'°C':' · coil above 0°C'}</div></div>
+    ${frosting&&acc?`<div class="on"><div class="k">Frost after ${n(acc.hours,1)} h</div><div class="v frostc">${n(acc.massKg,1)} kg</div><div class="n">${n(acc.meltwaterL,1)} l meltwater · ${n(acc.defrostKWh,2)} kWh to defrost</div></div>`:''}
+   </div>`;
 }
 function buildSurvey(){
   const Q=surveyCalc(), C=surveyChecks(Q), ic={ok:'✓',warn:'!',bad:'✕'};
   const worst=C.some(c=>c.lv==='bad')?'bad':C.some(c=>c.lv==='warn')?'warn':'ok';
   let h=`<div class="card rescard"><div class="kpi">
    <div><div class="k">Room sensible</div><div class="v">${n(Q.sens,1)}</div><div class="n">kW</div></div>
-   <div><div class="k">Room latent</div><div class="v">${n(Q.lat,1)}</div><div class="n">kW · ${n(Q.moist,2)} kg/h</div></div>
+   <div><div class="k">Room latent</div><div class="v">${n(Q.lat,1)}</div><div class="n">kW · ${mu(Q.moist)}</div></div>
    <div><div class="k">Total room load</div><div class="v">${n(Q.total,1)}</div><div class="n">kW · SHR ${n(Q.shr,2)}</div></div>
    <div><div class="k">Across the room</div><div class="v">${n(Q.dTs,1)}</div><div class="n">K · ${n(Q.dW,2)} g/kg</div></div>
+   ${Q.ach!==null?`<div><div class="k">Air changes</div><div class="v">${n(Q.ach,1)}</div><div class="n">ac/h total${Q.achFresh!==null?' · '+n(Q.achFresh,2)+' fresh':''}</div></div>`:''}
   </div></div>`;
   h+=`<details class="card" open><summary><span class="step">1</span><h2>What the room is doing</h2></summary><div class="cbody">
-   <table class="st"><tr><th>&nbsp;</th><th>Value</th><th></th></tr>
-   <tr><td>Supply air mass flow</td><td>${n(Q.mda,3)} kg/s</td><td class="mut">${n(Q.mda*3600,0)} kg/h dry air · ${fu(S.svFlow)} at ${S.svFlowRef==='return'?'return':'supply'} density</td></tr>
-   <tr><td>Measured airflow</td><td>${fu(S.svFlow)}</td><td class="mut">${fother(S.svFlow)}</td></tr>
-   <tr><td>Water carried IN with the supply air</td><td>${n(Q.mda*Q.sup.W*3600,2)} kg/h</td><td class="mut">at ${n(Q.sup.W*1000,2)} g/kg</td></tr>
-   <tr><td>Water carried OUT with the return air</td><td>${n(Q.mda*Q.ret.W*3600,2)} kg/h</td><td class="mut">at ${n(Q.ret.W*1000,2)} g/kg</td></tr>
-   <tr><td>Water added inside the room</td><td>${n(Q.moist,2)} kg/h</td><td class="mut">the difference — people, process, infiltration</td></tr>
-   <tr><td>Sensible heat gain</td><td>${n(Q.sens,2)} kW</td><td class="mut">${n(Q.dTs,1)} K rise</td></tr>
-   <tr><td>Latent heat gain</td><td>${n(Q.lat,2)} kW</td><td class="mut">${n(Q.moist,2)} kg/h of water</td></tr>
-   <tr><td>Total heat gain</td><td>${n(Q.total,2)} kW</td><td class="mut">SHR ${n(Q.shr,2)}</td></tr>
-   ${Q.ach!==null?`<tr><td>Air change rate</td><td>${n(Q.ach,1)} ac/h</td><td class="mut">${n(Q.V,0)} m³</td></tr>`:''}
-   <tr><td>Coil duty (total / sens / lat)</td><td>${n(Q.coilTot,1)} / ${n(Q.coilSens,1)} / ${n(Q.coilLat,1)} kW</td><td class="mut">${S.svFanKW>0?'off-coil '+n(Q.off.t,1)+'°C':'fan heat not entered'}</td></tr>
-   <tr><td>Condensate off the coil</td><td>${n(Q.cond,1)} kg/h</td><td class="mut">${n(Q.cond,1)} litres/hour at the drain</td></tr>
-   <tr><td>Apparatus dew point / contact factor</td><td>${Q.adp!==null?n(Q.adp,1)+'°C  ·  '+n(Q.cf,2):'dry coil'}</td><td class="mut"></td></tr>
-   </table>
+   <div class="rowhead"><span class="k">Airflow in</span>${auTog()}<span class="k" style="margin-left:8px">Moisture in</span>${muTog()}</div>
+   <div class="tw"><table class="st"><tr><th>&nbsp;</th><th>Value</th><th></th></tr>
+   ${surveyRows(Q).map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="mut">${r[2]||''}</td></tr>`).join('')}
+   </table></div>
+   ${moistureBlock(Q.cond,Q.frosting,Q.adp,Object.assign({hours:8},Q.frostAcc))}
    <div class="note">The room load is the supply mass flow times the enthalpy rise between supply and return. It therefore captures everything the space is doing — equipment, people, fabric, solar and any infiltration — whether or not it was ever in a design. It scales directly off the airflow figure.</div>
   </div></details>`;
   h+=`<details class="card" open><summary><span class="step">2</span><h2>Sense check</h2><span class="sub">${C.filter(c=>c.lv!=='ok').length} to look at</span></summary><div class="cbody">`;
   C.forEach(c=>{h+=`<div class="chk"><div class="ic ${c.lv}">${ic[c.lv]}</div><div class="tx"><b>${c.t}</b><br><span class="mut">${c.x}</span></div></div>`;});
   h+=`</div></details>`;
   h+=`<details class="card" open><summary><span class="step">3</span><h2>The readings on the chart</h2></summary><div class="cbody">
-   <table class="st"><tr><th>Point</th><th>°C</th><th>%RH</th><th>g/kg</th><th>kJ/kg</th><th>DP°C</th><th>WB°C</th></tr>
-   <tr><td>On the coil${S.svCoil==='on'?'':' (= return)'}</td><td>${n(Q.on.t,1)}</td><td>${n(Q.on.rh*100,0)}</td><td>${n(Q.on.W*1000,2)}</td><td>${n(Q.on.h,1)}</td><td>${n(Q.on.dp,1)}</td><td>${n(Q.on.wb,1)}</td></tr>
-   <tr><td>Off the coil (derived)</td><td>${n(Q.off.t,1)}</td><td>${n(Q.off.rh*100,0)}</td><td>${n(Q.off.W*1000,2)}</td><td>${n(Q.off.h,1)}</td><td>${n(Q.off.dp,1)}</td><td>${n(Q.off.wb,1)}</td></tr>
-   <tr><td>Supply into the room</td><td>${n(Q.sup.t,1)}</td><td>${n(Q.sup.rh*100,0)}</td><td>${n(Q.sup.W*1000,2)}</td><td>${n(Q.sup.h,1)}</td><td>${n(Q.sup.dp,1)}</td><td>${n(Q.sup.wb,1)}</td></tr>
-   <tr><td>Return / the room</td><td>${n(Q.ret.t,1)}</td><td>${n(Q.ret.rh*100,0)}</td><td>${n(Q.ret.W*1000,2)}</td><td>${n(Q.ret.h,1)}</td><td>${n(Q.ret.dp,1)}</td><td>${n(Q.ret.wb,1)}</td></tr>
-   </table>${surveyChart(Q)}</div></details>`;
+   <div class="tw"><table class="st"><tr><th>Point</th><th>°C</th><th>%RH</th><th>g/kg</th><th>kJ/kg</th><th>DP°C</th><th>WB°C</th></tr>
+   ${stateRows6(surveyStates(Q))}
+   </table></div><div id="surveyChart">${surveyChart(Q)}</div></div></details>`;
   document.getElementById('rightcol').innerHTML=h;
   document.getElementById('barin').innerHTML=
    `<div class="bcell"><div class="k">Airflow</div><div class="v">${fu(S.svFlow)}</div></div>
     <div class="bcell"><div class="k">Sensible</div><div class="v">${n(Q.sens,1)} kW</div></div>
     <div class="bcell"><div class="k">Latent</div><div class="v">${n(Q.lat,1)} kW</div></div>
-    <div class="bcell"><div class="k">Moisture</div><div class="v">${n(Q.moist,2)} kg/h</div></div>
+    <div class="bcell"><div class="k">Moisture</div><div class="v">${mu(Q.moist)}</div></div>
     <div class="bcell"><div class="k">Room</div><div class="v">${n(Q.ret.t,1)}° / ${n(Q.ret.rh*100,0)}%</div></div>
     <div class="bcell bstat"><div class="k">Status</div><div class="v ${worst}">${worst==='ok'?'✓ as expected':worst==='warn'?'! check':'✕ out of spec'}</div></div>`;
   document.getElementById('foot').innerHTML='Site check — worked entirely from the readings on the left. Nothing here is fed by, or feeds, the design side of the tool.';
 }
 
-function schematic(R){
+function schematic(R,forPdf){
   const stl=s=>`${n(s.t,1)}°C  ${n(s.rh*100,0)}%  ${n(s.W*1000,2)} g/kg`;
-  const BR='#2E90FF',CO='#5FC8F5',AM='#F2A03F',VI='#A98BFF',IN='#E6EEF6',MU='#7E97AE',GR='#4ED08A',RD='#FF6B6B';
-  const box=(x,y,w,h,col,fill)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${fill||'rgba(16,32,48,.92)'}" stroke="${col}" stroke-width="1.6"/>`;
-  const lab=(x,y,t,col,sz)=>`<text x="${x}" y="${y}" fill="${col||MU}" font-size="${sz||10.5}" font-family="IBM Plex Sans Condensed" letter-spacing="1.1" font-weight="600">${t}</text>`;
-  const val=(x,y,t,col,sz)=>`<text x="${x}" y="${y}" fill="${col||IN}" font-size="${sz||12}" font-family="IBM Plex Mono">${t}</text>`;
-  const big=(x,y,t,col,sz)=>`<text x="${x}" y="${y}" fill="${col||IN}" font-size="${sz||20}" font-family="IBM Plex Mono" font-weight="600">${t}</text>`;
+  const C=pal();
+  const BR=C.brand,CO=C.cool,AM=C.amber,VI=C.violet,IN=C.ink,MU=C.muted,GR=C.ok,RD=C.bad;
+  const box=(x,y,w,h,col,fill)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${fill||C.boxFill}" stroke="${col}" stroke-width="1.6"/>`;
+  const lab=(x,y,t,col,sz)=>`<text x="${x}" y="${y}" fill="${col||MU}" font-size="${sz||10.5}" font-family="${FC}" letter-spacing="1.1" font-weight="600">${t}</text>`;
+  const val=(x,y,t,col,sz)=>`<text x="${x}" y="${y}" fill="${col||IN}" font-size="${sz||12}" font-family="${FM}">${t}</text>`;
+  const big=(x,y,t,col,sz)=>`<text x="${x}" y="${y}" fill="${col||IN}" font-size="${sz||20}" font-family="${FM}" font-weight="600">${t}</text>`;
   const duct=(d,col)=>`<path d="${d}" fill="none" stroke="${col}" stroke-width="13" stroke-linejoin="round" stroke-linecap="round" opacity=".22"/>`
                      +`<path d="${d}" fill="none" stroke="${col}" stroke-width="1.2" stroke-linejoin="round" opacity=".85"/>`;
   const chev=(x,y,dir,col)=>{const p={r:`${x-5},${y-7} ${x+5},${y} ${x-5},${y+7}`,l:`${x+5},${y-7} ${x-5},${y} ${x+5},${y+7}`,
@@ -967,7 +1211,7 @@ function schematic(R){
     g+=val(24,128,stl(R.FAs),IN,12.5);
     g+=val(24,145,`${n(S.hrEffS,0)}% sens${S.hrType==='wheel'?' / '+n(S.hrEffL,0)+'% lat':''} · ${n(R.hrSaved,1)} kW back`,VI,10.5);
   } else if(S.hrType!=='none'){
-    g+=box(12,88,172,48,'#7A5A2A');
+    g+=box(12,88,172,48,C.idle);
     g+=lab(24,108,'HEAT RECOVERY IDLE',AM);
     g+=val(24,127,'no exhaust to work against',AM,10.5);
   }
@@ -988,14 +1232,14 @@ function schematic(R){
   }
 
   // room
-  g+=box(356,12,352,300,BR,'rgba(46,144,255,.07)');
+  g+=box(356,12,352,300,BR,C.roomFill);
   g+=lab(374,36,'THE ROOM · TARGET',BR);
   g+=big(374,78,`${n(S.roomT,1)}°C`,IN,32);
   g+=big(518,78,`${n(S.roomRH,0)}%`,IN,32);
   g+=val(628,64,`± ${n(S.tolT,1)} K`,MU,11);
   g+=val(628,80,`± ${n(S.tolRH,0)} %RH`,MU,11);
   const inTol=Math.abs(R.roomAct.t-S.roomT)<=S.tolT&&Math.abs(R.roomAct.rh*100-S.roomRH)<=S.tolRH;
-  g+=`<rect x="374" y="90" width="316" height="26" rx="5" fill="${inTol?'rgba(78,208,138,.12)':'rgba(255,107,107,.12)'}"/>`;
+  g+=`<rect x="374" y="90" width="316" height="26" rx="5" fill="${inTol?C.okWash:C.badWash}"/>`;
   g+=val(384,108,`achieved   ${n(R.roomAct.t,1)}°C   ${n(Math.min(R.roomAct.rh*100,100),0)}%   ${n(R.roomAct.W*1000,2)} g/kg`,inTol?GR:RD,12.5);
   g+=lab(374,142,'PEOPLE',MU);
   g+=val(374,162,`${n(S.occ,0)} × ${R.act.n.toLowerCase()}`,IN,12);
@@ -1004,13 +1248,13 @@ function schematic(R){
   g+=big(374,232,`${n(R.qs,1)} kW`,IN,22);
   g+=val(486,232,`of which ${n(R.qs-R.occSensKW,1)} kW plant and fabric`,MU,11);
   if(S.procLatent>0){g+=lab(374,254,'PROCESS MOISTURE',MU);g+=val(534,254,`${n(S.procLatent,1)} kg/h`,IN,12);}
-  g+=`<line x1="374" y1="266" x2="690" y2="266" stroke="#1B3348"/>`;
-  g+=val(374,284,`${n(S.roomArea,0)} m² × ${n(S.roomHeight,1)} m = ${n(R.V,0)} m³ · ${n(R.ach,1)} ac/h`,MU,10.5);
+  g+=`<line x1="374" y1="266" x2="690" y2="266" stroke="${C.rule}"/>`;
+  g+=val(374,284,`${n(S.roomArea,0)} m² × ${n(S.roomHeight,1)} m = ${n(R.V,0)} m³ · ${n(R.ach,1)} ac/h total · ${n(R.achFresh,2)} ac/h fresh`,MU,10.5);
   g+=val(374,301,(S.extract>0?`LEV ${fu(S.extract)} · `:'')+bal(R),R.leakOut<-0.5?RD:R.leakOut>0.5?BR:MU,10.5);
   if(R.leakOut>0.5) g+=lab(712,196,'OUT',BR,10);
 
   // AHU
-  g+=box(12,356,696,116,'#2A4F72','rgba(11,26,40,.92)');
+  g+=box(12,356,696,116,C.ahuLine,C.ahuFill);
   g+=lab(24,374,'AIR HANDLING UNIT',MU);
   const comp=(x,w,ttl,col,l1,l1s,l2,l3)=>{let s=box(x,384,w,80,col);
     s+=lab(x+12,402,ttl,col);
@@ -1019,22 +1263,24 @@ function schematic(R){
     if(l3)s+=val(x+12,458,l3,MU,10);
     return s;};
   g+=comp(22,132,'MIX',IN,`${n(pctF,0)}% fresh`,16,`${n(100-pctF,0)}% return air`,stl(R.E));
-  g+=comp(162,152,S.coolSrc==='dx'?'DX COIL':'COOLING COIL',CO,`${n(R.total,1)} kW`,19,
-      `${n(R.sens,1)} sens / ${n(R.lat,1)} lat`,`off ${n(R.off.t,1)}°C ${n(R.off.rh*100,0)}% · ADP ${n(R.t_ADP,1)}°C`);
+  g+=comp(162,152,(S.coolSrc==='dx'?'DX COIL':'COOLING COIL')+(R.frosting?' · FROSTED':''),CO,`${n(R.total,1)} kW`,19,
+      `${n(R.sens,1)} sens / ${n(R.lat,1)} lat · ${R.frosting?'frost':'drain'} ${mu(R.cond)}`,`off ${n(R.off.t,1)}°C ${n(R.off.rh*100,0)}% · ADP ${n(R.t_ADP,1)}°C`);
   g+=comp(324,116,'REHEAT',R.reheat>0?AM:MU,R.reheat>0?`${n(R.reheat,1)} kW`:'none',R.reheat>0?19:14,
       R.reheat>0?(S.reheatSrc==='hotgas'?'hot gas':S.reheatSrc==='recover'?'run-around':S.reheatSrc==='elec'?'electric':'LPHW'):'not required',
       R.reheat>0&&R.reheatFree?'free to run':'');
   g+=comp(450,80,'FAN',BR,`+${n(R.fanRise,1)} K`,15,S.fanMode==='sfp'?`${n(S.sfp,1)} W/l/s`:'stated','');
-  g+=box(538,384,158,80,BR,'rgba(46,144,255,.10)');
+  g+=box(538,384,158,80,BR,C.supFill);
   g+=lab(550,402,'SUPPLY AIR',BR);
-  const fs=fv(R.flow); g+=big(550,428,fs,BR,fs.length>5?21:24); g+=val(550+fs.length*(fs.length>5?12.7:14.5)+7,428,auN(),BR,12);
+  const fs=fv(R.flow), fsz=fs.length>6?18:fs.length>5?21:24; g+=big(550,428,fs,BR,fsz); g+=val(550+fs.length*fsz*0.6+7,428,auN(),BR,12);
   g+=val(550,445,stl(R.supply),IN,11.5);
   g+=val(550,459,`${n(S.roomT-R.supply.t,1)} K below room`,MU,10);
   g+=lab(632,344,'SUPPLY',BR);
   g+=lab(310,352,'RETURN AIR AT ROOM CONDITION',MU);
+  const svg=`<svg viewBox="0 0 760 484" style="min-width:${schemMinW(SCHZ)}" xmlns="http://www.w3.org/2000/svg">${forPdf?`<rect width="760" height="484" fill="${C.bg}"/>`:''}${g}</svg>`;
+  if(forPdf) return svg;
   return `<div class="zoomrow"><span>Size</span>`+
     [[1,'Fit'],[1.5,'Bigger'],[2.2,'Biggest']].map(z=>`<button data-z="${z[0]}" aria-pressed="${SCHZ===z[0]}" onclick="zoomSchem(${z[0]})">${z[1]}</button>`).join('')+
-    `</div><div class="schem"><svg viewBox="0 0 760 484" style="min-width:${720*SCHZ}px" xmlns="http://www.w3.org/2000/svg">${g}</svg></div>`;
+    `<span class="sp" style="flex:1"></span><span>Airflow</span>${auTog()}</div><div class="schem">${svg}</div>`;
 }
 function bal(R){
   const pa=R.roomPa;
@@ -1047,7 +1293,7 @@ function ladder(R){
   const vals=keys.map(k=>isFinite(R.cand[k])?R.cand[k]:0);
   const fixed=S.flowMode==='fixed';
   const mx=Math.max(...vals,fixed?R.flow:0,1);
-  let h='<div class="ladder">';
+  let h=`<div class="rowhead"><span class="k">Airflow in</span>${auTog()}<span class="sp"></span><span class="k">${n(R.ach,1)} ac/h total · ${n(R.achFresh,2)} ac/h fresh on ${n(R.V,0)} m³</span></div><div class="ladder">`;
   keys.forEach((k,i)=>{
     const win=!fixed&&((k===R.driver)||(R.driver==='latent-impossible'&&k==='sensible'));
     const na=!isFinite(R.cand[k])||R.cand[k]<=0;
@@ -1062,25 +1308,30 @@ function ladder(R){
   h+='</div>';
   if(fixed){
     const sk=Object.keys(R.shortfall);
-    if(sk.length) h+=`<div class="driver" style="border-left-color:var(--bad);background:rgba(255,107,107,.08)">
+    if(sk.length) h+=`<div class="driver bad">
       <b class="bad">${fu(R.flow)} does not cover everything.</b> Short on ${sk.map(k=>DRV[k][0].toLowerCase()+' ('+fu(R.shortfall[k])+')').join(', ')}.
       Read the room it actually achieves below before you commit to this unit.</div>`;
     else h+=`<div class="driver"><b>${fu(R.flow)} covers every requirement.</b> The largest of them is
       ${DRV[R.driver][0].toLowerCase()} at ${fu(R.cand[R.driver]||0)}, so you have
-      ${n((R.flow/(R.cand[R.driver]||1)-1)*100,0)}% in hand.</div>`;
+      ${n((R.flow/(R.cand[R.driver]||1)-1)*100,0)}% in hand. That is ${n(R.ach,1)} air changes an hour on the room, of which ${n(R.achFresh,2)} ac/h is fresh air.</div>`;
     return h;
   }
   if(R.driver==='latent-impossible'){
-    h+=`<div class="driver" style="border-left-color:var(--bad);background:rgba(255,107,107,.08)">
+    h+=`<div class="driver bad">
      <b class="bad">No airflow will hold this humidity.</b> With a contact factor of ${n(R.CF,2)} and
      ${SRC()} the coil bottoms out at ${n(R.WoffMin*1000,2)} g/kg — but the space can only be allowed to reach ${n(R.Wdeh*1000,2)} g/kg.
      Supply air that is wetter than the room can never dry it, so no airflow fixes this. Drop the chilled water temperature,
      buy a deeper coil (higher contact factor), or put a desiccant in front of it.</div>`;
   } else {
     h+=`<div class="driver"><b>${DRV[R.driver][0]} sets the airflow at ${fu(R.flow)}</b> — ${DRV[R.driver][1]}.
-     Everything else is satisfied underneath it. That is ${n(R.ach,1)} air changes an hour and ${n(R.oaPct,0)}% fresh air.</div>`;
+     Everything else is satisfied underneath it. That is ${n(R.ach,1)} air changes an hour on the ${n(R.V,0)} m³ room, ${n(R.oaPct,0)}% fresh air — ${fu(R.oa_ls)}, or ${n(R.achFresh,2)} fresh-air changes an hour.</div>`;
   }
   return h;
+}
+function ladderRows(R){
+  const keys=['sensible','latent','fresh','pressure','minach'];
+  return keys.map(k=>[DRV[k][0],(k==='latent'&&R.latImposs)?'no airflow can':fu(isFinite(R.cand[k])?R.cand[k]:0),
+    S.flowMode!=='fixed'&&(k===R.driver||(R.driver==='latent-impossible'&&k==='sensible'))?'sets the airflow':(S.flowMode==='fixed'&&R.shortfall[k]?'not met':'')]);
 }
 
 function stateRow(nm,s,note){return `<tr><td>${nm}</td><td>${n(s.t,1)}</td><td>${n(s.rh*100,0)}</td><td>${n(s.W*1000,2)}</td><td>${n(s.h,1)}</td><td>${n(s.dp,1)}</td><td class="mut">${note||''}</td></tr>`;}
@@ -1142,7 +1393,13 @@ function checks(R){
   else push('ok','Face velocity is sound',`${n(S.faceVel,2)} m/s across ${n(R.faceArea,2)} m² of coil face.`);
 
   if(R.dtSupply>11) push('warn','Supply air is very cold relative to the room',`${n(R.dtSupply,1)} K below room. Needs high-induction diffusers or you will get dumping and cold complaints.`);
-  if(R.wet) push('ok','Condensate drain','Wet coil: '+n(R.cond,1)+' kg/h. Trap depth must exceed the fan negative static or the drain will not run.');
+  if(R.fogKgh>0.01) push('warn','The fresh air fogs when it meets the return air',
+    `Mixing ${n(S.osDB,0)}°C / ${n(S.osRH,0)}% outside air into a ${n(S.roomT,0)}°C room gives a supersaturated mixture: about ${muBoth(R.fogKgh)} drops out in the mixing section${S.roomT<0?' as frost':' as water'} before the coil sees it. Pre-treat or reduce the fresh air, or take it through the heat recovery first.`);
+  if(R.frosting){
+    const a=R.frostAcc;
+    push('warn','The coil runs frosted — moisture builds up as ice, not condensate',
+      `Apparatus dew point ${n(R.t_ADP,1)}°C. The ${muBoth(R.cond)} taken out of the air is held on the fins as frost, so after ${n(S.defrostH||8,1)} h there is ${n(a.massKg,1)} kg of ice on the block and ${n(a.meltwaterL,1)} litres to drain at defrost. Freezing and sub-cooling it adds ${n(R.frostKW,2)} kW to the coil duty, and the defrost has to put ${n(a.defrostKWh,2)} kWh back (${n(a.sensKWh,2)} warming the ice, ${n(a.meltKWh,2)} melting it). Airflow will fall as the block ices, so allow for it in the fan and specify the defrost — hot gas, electric or reverse cycle — and a heated drain.`);
+  } else if(R.wet) push('ok','Condensate drain',`Wet coil: ${muBoth(R.cond)}. Trap depth must exceed the fan negative static or the drain will not run.`);
 
   if(R.leakOut<-0.5) push(R.roomPa<-1?'bad':'warn','The room will run negative',
     `Exhaust and extract take ${fu(-R.leakOut)} more than the fresh air brings in, so the shell pulls that in from wherever it can — about ${n(R.roomPa,1)} Pa.`);
@@ -1170,7 +1427,7 @@ function checks(R){
    `${n(R.humKgh,1)} kg/h ${S.humid==='steam'?'as steam, about '+n(R.humkW,1)+' kW':'adiabatic — preheat to '+n(R.preheatAdb,1)+'°C first'}. ${S.humid==='none'?'':''}`);
   if(S.humid==='none'&&R.humKgh>0) push('warn','No humidifier selected','The space will fall below the humidity target in winter.');
   if(S.coolSrc==='dx'){
-    if(S.evapT<1) push('warn','Evaporating temperature will frost the coil',`${n(S.evapT,1)}°C. Below about 1°C you need hot gas or reverse-cycle defrost, and part load makes it worse.`);
+    if(S.evapT<1&&!R.frosting) push('warn','Evaporating temperature will frost the coil at part load',`${n(S.evapT,1)}°C. Below about 1°C you need hot gas or reverse-cycle defrost, and part load makes it worse.`);
     push(S.reheatSrc==='hotgas'?'ok':'warn','DX humidity control at part load',
       S.reheatSrc==='hotgas'?'Hot gas reheat lets the unit run the coil for moisture and put the heat back — that is the right arrangement for humidity control on DX.':'A DX coil only dehumidifies while the compressor runs, so step or on/off control makes the room swing. Inverter compressors with hot gas reheat is what actually holds a tight RH.');
     push('ok','DX electrical load',`${n(R.dxAbs,1)} kW absorbed at EER ${n(S.dxEER,1)} — about ${n(R.amps(R.dxAbs),0)} A at 400 V three phase.`);
@@ -1186,46 +1443,32 @@ function checks(R){
   if(R.elecTotal>0) push('ok','Electrical load of this plant',
     `${n(R.elecTotal,1)} kW, about ${n(R.amps(R.elecTotal),0)} A at 400 V three phase, fans excluded.`);
   if(S.owDB<2) push('ok','Frost protection','Outside air below 2°C — frost coil or heat-recovery frost strategy required upstream of the cooling coil.');
+  push('ok','Air change rates',`${n(R.ach,1)} ac/h of supply air on the ${n(R.V,0)} m³ room (${fu(R.flow)}), of which ${n(R.achFresh,2)} ac/h is fresh air (${fu(R.oa_ls)}). ${S.minACH>0?'The minimum imposed is '+n(S.minACH,1)+' ac/h.':''}`);
   return C;
 }
 
 function chart(R){
-  const X0=52,X1=600,Y0=356,Y1=20, tA=-10,tB=45, wA=0,wB=24;
-  const px=t=>X0+(t-tA)/(tB-tA)*(X1-X0), py=w=>Y0-(w-wA)/(wB-wA)*(Y0-Y1);
-  let g='';
-  for(let t=tA;t<=tB;t+=5) g+=`<line x1="${px(t)}" y1="${Y0}" x2="${px(t)}" y2="${Y1}" stroke="#17304A"/><text x="${px(t)}" y="${Y0+15}" fill="#7E97AE" font-size="10" text-anchor="middle" font-family="IBM Plex Mono">${t}</text>`;
-  for(let w=0;w<=wB;w+=4) g+=`<line x1="${X0}" y1="${py(w)}" x2="${X1}" y2="${py(w)}" stroke="#17304A"/><text x="${X0-7}" y="${py(w)+3}" fill="#7E97AE" font-size="10" text-anchor="end" font-family="IBM Plex Mono">${w}</text>`;
-  const P=S.pressure;
-  [1,.8,.6,.4,.2].forEach(rh=>{
-    let d='';
-    for(let t=tA;t<=tB;t+=0.5){const w=WfromRH(t,rh,P)*1000; if(w>wB)break; d+=(d?'L':'M')+px(t)+' '+py(w);}
-    g+=`<path d="${d}" fill="none" stroke="${rh===1?'#2E90FF':'#1E3E5C'}" stroke-width="${rh===1?2:1}"/>`;
-    if(rh<1){const tt=tA+ (rh*30)+8; const w=WfromRH(tt,rh,P)*1000; if(w<wB-1) g+=`<text x="${px(tt)+3}" y="${py(w)-3}" fill="#55738F" font-size="9" font-family="IBM Plex Mono">${rh*100}%</text>`;}
-  });
+  const C=pal(), P=S.pressure, X0=52,X1=600,Y0=356,Y1=20;
+  const adpS={t:R.t_ADP,W:R.W_ADP};
+  const r=chartRange([R.OA,R.E,adpS,R.off,R.supply,R.roomAct,R.OW,R.Ew,{t:R.ts_w,W:R.Ew.W}],-10,45,24);
+  const F=psyGrid(X0,X1,Y0,Y1,r,P), {px,py,wB}=F;
+  let g=F.g;
   // control box
   const bx1=px(S.roomT-S.tolT),bx2=px(S.roomT+S.tolT);
-  const bw1=WfromRH(S.roomT,(S.roomRH-S.tolRH)/100,P)*1000, bw2=WfromRH(S.roomT,(S.roomRH+S.tolRH)/100,P)*1000;
-  g+=`<rect x="${bx1}" y="${py(bw2)}" width="${bx2-bx1}" height="${py(bw1)-py(bw2)}" fill="rgba(46,144,255,.10)" stroke="#2E90FF" stroke-dasharray="3 3"/>`;
-  const pts=[['O',R.OA,'#F2A03F'],['M',R.E,'#A98BFF'],['ADP',{t:R.t_ADP,W:R.W_ADP},'#5FC8F5'],
-    ['C',R.off,'#5FC8F5'],['S',R.supply,'#2E90FF'],['R',R.roomAct,'#E6EEF6']];
+  const bw1=WfromRH(S.roomT,Math.max(.01,(S.roomRH-S.tolRH)/100),P)*1000, bw2=WfromRH(S.roomT,Math.min(1,(S.roomRH+S.tolRH)/100),P)*1000;
+  g+=`<rect x="${bx1}" y="${py(bw2)}" width="${bx2-bx1}" height="${py(bw1)-py(bw2)}" fill="${C.tolBox}" stroke="${C.brand}" stroke-dasharray="3 3"/>`;
+  const pts=[['O',R.OA,C.amber],['M',R.E,C.violet],['ADP',adpS,C.cool],
+    ['C',R.off,C.cool],['S',R.supply,C.brand],['R',R.roomAct,C.ink]];
   let path='';
   [R.OA,R.E,R.off,R.supply,R.roomAct].forEach((p,i)=>{path+=(i?'L':'M')+px(p.t)+' '+py(Math.min(p.W*1000,wB));});
-  g+=`<path d="${path}" fill="none" stroke="#2E90FF" stroke-width="1.6" opacity=".85"/>`;
-  g+=`<line x1="${px(R.E.t)}" y1="${py(R.E.W*1000)}" x2="${px(R.t_ADP)}" y2="${py(R.W_ADP*1000)}" stroke="#5FC8F5" stroke-dasharray="4 3" opacity=".7"/>`;
+  g+=`<path d="${path}" fill="none" stroke="${C.brand}" stroke-width="1.6" opacity=".85"/>`;
+  g+=`<line x1="${px(R.E.t)}" y1="${py(R.E.W*1000)}" x2="${px(R.t_ADP)}" y2="${py(R.W_ADP*1000)}" stroke="${C.cool}" stroke-dasharray="4 3" opacity=".7"/>`;
   // winter
-  g+=`<path d="M${px(R.OW.t)} ${py(R.OW.W*1000)}L${px(R.Ew.t)} ${py(R.Ew.W*1000)}L${px(R.ts_w)} ${py(Math.max(R.Ew.W,R.room.W-R.latKgh/3600/R.mda)*1000)}" fill="none" stroke="#F2A03F" stroke-width="1.3" stroke-dasharray="5 4" opacity=".75"/>`;
-  g+=`<circle cx="${px(R.OW.t)}" cy="${py(R.OW.W*1000)}" r="3.5" fill="#F2A03F"/><text x="${px(R.OW.t)+7}" y="${py(R.OW.W*1000)+4}" fill="#F2A03F" font-size="10" font-family="IBM Plex Mono">Ow</text>`;
+  g+=`<path d="M${px(R.OW.t)} ${py(R.OW.W*1000)}L${px(R.Ew.t)} ${py(R.Ew.W*1000)}L${px(R.ts_w)} ${py(Math.max(R.Ew.W,R.room.W-R.latKgh/3600/R.mda)*1000)}" fill="none" stroke="${C.amber}" stroke-width="1.3" stroke-dasharray="5 4" opacity=".75"/>`;
+  g+=`<circle cx="${px(R.OW.t)}" cy="${py(R.OW.W*1000)}" r="3.5" fill="${C.amber}"/><text x="${px(R.OW.t)+7}" y="${py(R.OW.W*1000)+4}" fill="${C.amber}" font-size="10" font-family="${FM}">Ow</text>`;
   pts.forEach(p=>{const x=px(p[1].t),y=py(Math.min(p[1].W*1000,wB));
-    g+=`<circle cx="${x}" cy="${y}" r="4.5" fill="${p[2]}" stroke="#08131F" stroke-width="1.5"/>
-        <text x="${x+7}" y="${y-6}" fill="${p[2]}" font-size="11" font-weight="600" font-family="IBM Plex Mono">${p[0]}</text>`;});
-  if(false){try{const Q=surveyCalc(S,R);
-    [['S*',Q.sup],['R*',Q.ret]].forEach(p=>{const x=px(p[1].t),y=py(Math.min(p[1].W*1000,wB));
-      g+=`<rect x="${x-4.5}" y="${y-4.5}" width="9" height="9" fill="#F2A03F" stroke="#08131F" stroke-width="1.5"/>
-          <text x="${x+8}" y="${y+10}" fill="#F2A03F" font-size="11" font-weight="600" font-family="IBM Plex Mono">${p[0]}</text>`;});
-    g+=`<line x1="${px(Q.sup.t)}" y1="${py(Q.sup.W*1000)}" x2="${px(Q.ret.t)}" y2="${py(Q.ret.W*1000)}" stroke="#F2A03F" stroke-width="1.6"/>`;
-  }catch(e){}}
-  g+=`<text x="${(X0+X1)/2}" y="${Y0+32}" fill="#7E97AE" font-size="10.5" text-anchor="middle" font-family="IBM Plex Sans Condensed" letter-spacing="1">DRY BULB °C</text>`;
-  g+=`<text x="14" y="${(Y0+Y1)/2}" fill="#7E97AE" font-size="10.5" text-anchor="middle" font-family="IBM Plex Sans Condensed" letter-spacing="1" transform="rotate(-90 14 ${(Y0+Y1)/2})">MOISTURE g/kg</text>`;
+    g+=`<circle cx="${x}" cy="${y}" r="4.5" fill="${p[2]}" stroke="${C.outline}" stroke-width="1.5"/>
+        <text x="${x+7}" y="${y-6}" fill="${p[2]}" font-size="11" font-weight="600" font-family="${FM}">${p[0]}</text>`;});
   return `<svg viewBox="0 0 620 400" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
 }
 
@@ -1239,11 +1482,13 @@ function buildResults(R){
     document.getElementById('foot').innerHTML='Moist-air properties to the ASHRAE Hyland–Wexler formulation. Nothing on this page feeds the design or the site check.';return;}
   if(MODE==='site'){buildSurvey();return;}
   h+=`<div class="card rescard" open><div class="kpi">
-   <div><div class="k">Design airflow</div><div class="v">${fv(R.flow)}</div><div class="n">${auN()} · ${fother(R.flow)} · ${n(R.ach,1)} ac/h</div></div>
-   <div><div class="k">Cooling coil</div><div class="v">${n(R.total,1)}</div><div class="n">kW · ${n(R.sens,1)} sens / ${n(R.lat,1)} lat</div></div>
+   <div><div class="k">Design airflow ${auTog()}</div><div class="v">${fv(R.flow)}</div><div class="n">${auN()} · ${fother(R.flow)}</div></div>
+   <div><div class="k">Air changes</div><div class="v">${n(R.ach,1)}</div><div class="n">ac/h total · ${n(R.achFresh,2)} ac/h fresh · ${n(R.V,0)} m³</div></div>
+   <div><div class="k">Cooling coil</div><div class="v">${n(R.total,1)}</div><div class="n">kW · ${n(R.sens,1)} sens / ${n(R.lat,1)} lat${R.frosting?' · frosted':''}</div></div>
+   <div><div class="k">${R.frosting?'Frost on coil':'Condensate'} ${muTog()}</div><div class="v ${R.frosting?'frostc':''}">${mvv(R.cond)}</div><div class="n">${muN()} · ${muOther(R.cond)}</div></div>
    <div><div class="k">Reheat</div><div class="v" style="color:${R.reheat>0?'var(--amber)':'var(--ink)'}">${n(R.reheat,1)}</div><div class="n">kW ${S.reheatSrc==='recover'&&R.reheat>0?'· recovered':''}</div></div>
    ${S.coolSrc==='chw'
-    ?`<div><div class="k">Chilled water</div><div class="v">${wv(R.chwFlow)}</div><div class="n">${wuN()} at ${n(S.chwF,0)}/${n(S.chwR,0)}°C</div></div>`
+    ?`<div><div class="k">Chilled water ${wuTog()}</div><div class="v">${wv(R.chwFlow)}</div><div class="n">${wuN()} at ${n(S.chwF,0)}/${n(S.chwR,0)}°C</div></div>`
     :`<div><div class="k">DX absorbed</div><div class="v">${n(R.dxAbs,1)}</div><div class="n">kW · ${n(R.amps(R.dxAbs),0)} A at 400 V</div></div>`}
   </div></div>`;
 
@@ -1255,63 +1500,81 @@ function buildResults(R){
   h+=`</div></details>`;
 
   h+=`<details class="card" open><summary><span class="step">D</span><h2>The air path</h2></summary><div class="cbody">
-   <table class="st"><tr><th>Point</th><th>°C</th><th>%RH</th><th>g/kg</th><th>kJ/kg</th><th>DP°C</th><th></th></tr>
-   ${stateRow('O · Outside air',R.OA,'summer design')}
-   ${stateRow('M · Onto the coil',R.E,n(R.oaPct,0)+'% fresh')}
-   ${stateRow('ADP · Apparatus dew point',{t:R.t_ADP,W:R.W_ADP,rh:1,h:enth(R.t_ADP,R.W_ADP),dp:R.t_ADP},'CF '+n(R.CF,2))}
-   ${stateRow('C · Off the coil',R.off,R.wet?'wet':'dry')}
-   ${stateRow('S · Into the room',R.supply,'+'+n(R.fanRise,1)+'K fan'+(R.reheat>0?', reheated':''))}
-   ${stateRow('R · Room achieved',R.roomAct,'')}
-   ${stateRow('T · Room asked for',R.room,'target')}
-   </table>
-   <div class="note">Fan heat is added after the coil, so the coil is selected ${n(R.fanRise,1)} K colder than the supply condition. Contact factor ${n(R.CF,2)} means the air leaves the coil at ${n(R.off.rh*100,0)}% RH, not saturated.</div>
+   <div class="tw"><table class="st"><tr><th>Point</th><th>°C</th><th>%RH</th><th>g/kg</th><th>kJ/kg</th><th>DP°C</th><th></th></tr>
+   ${airPath(R).map(p=>stateRow(p[0],p[1],p[2])).join('')}
+   </table></div>
+   ${moistureBlock(R.cond,R.frosting,R.t_ADP,Object.assign({hours:S.defrostH||8},R.frostAcc))}
+   <div class="note">Fan heat is added after the coil, so the coil is selected ${n(R.fanRise,1)} K colder than the supply condition. Contact factor ${n(R.CF,2)} means the air leaves the coil at ${n(R.off.rh*100,0)}% RH, not saturated.${R.frosting?' With the surface below 0°C the water comes out of the air as frost on the fins — it does not reach the drain until the coil is defrosted.':''}</div>
    </div></details>`;
 
-  h+=`<details class="card" open><summary><span class="step">E</span><h2>The chart</h2></summary><div class="cbody">${chart(R)}
-   <div class="legend"><span><i style="background:#2E90FF"></i>summer process</span><span><i style="background:#5FC8F5"></i>coil line to ADP</span>
-   <span><i style="background:#F2A03F"></i>winter</span><span><i style="background:rgba(46,144,255,.4)"></i>client tolerance box</span></div></div></details>`;
+  const C2=pal();
+  h+=`<details class="card" open><summary><span class="step">E</span><h2>The chart</h2></summary><div class="cbody"><div id="designChart">${chart(R)}</div>
+   <div class="legend"><span><i style="background:${C2.brand}"></i>summer process</span><span><i style="background:${C2.cool}"></i>coil line to ADP</span>
+   <span><i style="background:${C2.amber}"></i>winter</span><span><i style="background:${C2.tolBox};border:1px solid ${C2.brand}"></i>client tolerance box</span></div></div></details>`;
 
-  h+=`<details class="card"><summary><span class="step">F</span><h2>What to buy</h2></summary><div class="cbody">
-   <table class="st">
-   <tr><td>Supply airflow</td><td>${fu(R.flow)}</td><td class="mut">${fother(R.flow)}</td></tr>
-   <tr><td>Fresh air / extract replaced</td><td>${fu(R.oa_ls)} / ${fu(S.extract)}</td></tr>
-   <tr><td>Exhaust spilled at the unit</td><td>${fu(R.exh_ls)}</td></tr>
-   <tr><td>Leakage at ${n(S.pressDP,0)} Pa</td><td>${S.pressMode==='none'?'—':fu(R.leak_ls)}</td></tr>
-   <tr><td>Cooling coil total / sensible / latent</td><td>${n(R.total,1)} / ${n(R.sens,1)} / ${n(R.lat,1)} kW</td></tr>
-   <tr><td>Coil face area at ${n(S.faceVel,2)} m/s</td><td>${n(R.faceArea,2)} m²</td></tr>
-   <tr><td>Indicative coil depth for CF ${n(R.CF,2)}</td><td>${R.rows} row</td></tr>
-   <tr><td>Supply air mass flow</td><td>${n(R.mda,3)} kg/s · ${n(R.mda*3600,0)} kg/h dry air</td></tr>
-   <tr><td>Water brought in by the fresh air</td><td>${n(Math.max(0,R.oa_ls/1000/R.FAs.v*(R.FAs.W-R.room.W)*3600),2)} kg/h</td></tr>
-   <tr><td>Water generated inside the room</td><td>${n(R.latKgh,2)} kg/h</td></tr>
-   <tr><td>Condensate at the coil</td><td>${n(R.cond,1)} kg/h · ${n(R.cond,1)} litres/h at the drain</td></tr>
-   ${S.coolSrc==='chw'
-    ?`<tr><td>Chilled water flow ${S.glycol>0?'('+n(S.glycol,0)+'% glycol)':''}</td><td>${wu(R.chwFlow)} at ${n(S.chwR-S.chwF,0)} K</td></tr>`
-    :`<tr><td>DX evaporating temperature</td><td>${n(S.evapT,1)} °C</td></tr><tr><td>DX absorbed power at EER ${n(S.dxEER,1)}</td><td>${n(R.dxAbs,1)} kW · ${n(R.amps(R.dxAbs),0)} A</td></tr>`}
-   ${S.reheatSrc==='recover'&&R.reheat>0?'<tr><td>Cooling duty with the run-around in service</td><td>'+n(R.total-R.reheat,1)+' kW</td></tr>':''}
-   <tr><td>Cooling duty — gross at the coil</td><td>${n(R.total,1)} kW</td></tr>
-   <tr><td>Cooling duty — net into the space</td><td>${n(R.netCool,1)} kW</td></tr>
-   <tr><td>Supply fan and motor heat</td><td>${n(R.fanKW,1)} kW  (${n(R.fanRise,2)} K rise)</td></tr>
-   <tr><td>Fresh-air share of the cooling duty</td><td>${n(R.oaLoad,1)} kW</td></tr>
-   <tr><td>Reheat battery (${S.reheatSrc==='hotgas'?'hot gas':S.reheatSrc==='recover'?'run-around':S.reheatSrc})</td><td>${n(R.reheat,1)} kW${S.reheatSrc==='lphw'?' / '+wu(R.lphwFlow)+' LPHW':S.reheatSrc==='elec'?' / '+n(R.amps(R.reheat),0)+' A':R.reheatFree?' / free':''}</td></tr>
-   <tr><td>Winter heater battery (${S.heatSrc==='hp'?'heat pump':S.heatSrc})</td><td>${n(R.heater,1)} kW${S.heatSrc==='lphw'?' / '+wu(R.lphwHeatFlow)+' LPHW':S.heatSrc==='elec'?' / '+n(R.amps(R.heater),0)+' A':' / '+n(R.hpAbs,1)+' kW absorbed'}</td></tr>
-   <tr><td>Total electrical load (fans excluded)</td><td>${n(R.elecTotal,1)} kW · ${n(R.amps(R.elecTotal),0)} A at 400 V</td></tr>
-   <tr><td>Winter supply temperature</td><td>${n(R.ts_w,1)} °C</td></tr>
-   <tr><td>Humidifier</td><td>${R.humKgh>0?n(R.humKgh,1)+' kg/h'+(S.humid==='steam'?' ('+n(R.humkW,1)+' kW steam)':' (adiabatic)'):'not required'}</td></tr>
-   <tr><td>Room loads carried</td><td>${n(R.qs,1)} kW sensible / ${n(R.latKgh,1)} kg/h moisture</td></tr>
-   </table>
+  h+=`<details class="card"><summary><span class="step">F</span><h2>Recommended equipment</h2><span class="sub">what to specify and buy</span></summary><div class="cbody">
+   <div class="rowhead"><span class="k">Airflow in</span>${auTog()}<span class="k" style="margin-left:8px">Water in</span>${wuTog()}<span class="k" style="margin-left:8px">Moisture in</span>${muTog()}</div>
+   <div class="tw"><table class="st">
+   ${equipRows(R).map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="mut">${r[2]||''}</td></tr>`).join('')}
+   </table></div>
    <div class="note">Indicative coil depth assumes about 2.5 m/s face velocity and normal fin spacing — confirm against the manufacturer's selection. Every figure here is a design-point calculation, not a substitute for a coil selection program.</div>
    </div></details>`;
 
   document.getElementById('rightcol').innerHTML=h;
   document.getElementById('barin').innerHTML=
    `<div class="bcell"><div class="k">Airflow</div><div class="v">${fu(R.flow)}</div></div>
+    <div class="bcell"><div class="k">Air changes</div><div class="v">${n(R.ach,1)} <span class="mut" style="font-size:12px">· ${n(R.achFresh,2)} fresh</span></div></div>
     <div class="bcell"><div class="k">Cooling</div><div class="v">${n(R.total,1)} kW</div></div>
+    <div class="bcell"><div class="k">${R.frosting?'Frost':'Condensate'}</div><div class="v ${R.frosting?'frostc':''}">${mu(R.cond)}</div></div>
     <div class="bcell"><div class="k">Reheat</div><div class="v" style="color:${R.reheat>0?'var(--amber)':'var(--ink)'}">${n(R.reheat,1)} kW</div></div>
     <div class="bcell"><div class="k">Room</div><div class="v">${n(R.roomAct.t,1)}° / ${n(Math.min(R.roomAct.rh*100,100),0)}%</div></div>
     <div class="bcell bstat"><div class="k">Status</div><div class="v ${worst}">${worst==='ok'?'✓ holds':worst==='warn'?'! review':'✕ will not hold'}</div></div>`;
   document.getElementById('foot').innerHTML=
-   `RoomFirst · air and plant selection from the client's room condition. Moist-air properties to the ASHRAE Hyland–Wexler formulation, saturation over ice below 0°C.
+   `RoomFirst · air and plant selection from the client's room condition. Moist-air properties to the ASHRAE Hyland–Wexler formulation, saturation over ice below 0°C; frosted coils carry the heat of fusion (333.6 kJ/kg) and ice sub-cooling.
     Steady state, fully mixed, single zone. Confirm coil selections with the manufacturer and design weather with CIBSE Guide A.`;
+}
+/* air-path states: [label, state, note] — shared by the table and the PDF */
+function airPath(R){
+  return [['O · Outside air',R.OA,'summer design'],
+   ['M · Onto the coil',R.E,n(R.oaPct,0)+'% fresh'],
+   ['ADP · Apparatus dew point',{t:R.t_ADP,W:R.W_ADP,rh:1,h:enth(R.t_ADP,R.W_ADP),dp:R.t_ADP},'CF '+n(R.CF,2)+(R.frosting?' · frosted':'')],
+   ['C · Off the coil',R.off,R.frosting?'frosted':R.wet?'wet':'dry'],
+   ['S · Into the room',R.supply,'+'+n(R.fanRise,1)+'K fan'+(R.reheat>0?', reheated':'')],
+   ['R · Room achieved',R.roomAct,''],
+   ['T · Room asked for',R.room,'target']];
+}
+/* recommended equipment: [label, value, note] — shared by the table and the PDF */
+function equipRows(R){
+  const rows=[
+   ['Supply airflow',fu(R.flow),fother(R.flow)],
+   ['Air change rate — total',`${n(R.ach,1)} ac/h`,`${fu(R.flow)} on ${n(R.V,0)} m³ (${n(S.roomArea,0)} m² × ${n(S.roomHeight,1)} m)`],
+   ['Air change rate — fresh air',`${n(R.achFresh,2)} ac/h`,`${fu(R.oa_ls)} · ${n(R.oaPct,0)}% of supply${S.occ>0?' · '+fu(R.oa_ls/S.occ,1)+' per person':''}`],
+   ['Fresh air / extract replaced',`${fu(R.oa_ls)} / ${fu(S.extract)}`,''],
+   ['Exhaust spilled at the unit',fu(R.exh_ls),''],
+   ['Leakage at '+n(S.pressDP,0)+' Pa',S.pressMode==='none'?'—':fu(R.leak_ls),`on a ${n(R.G.env,0)} m² envelope, ${(LEAK[S.leakClass]||LEAK.avg).n.toLowerCase()}`],
+   ['Cooling coil total / sensible / latent',`${n(R.total,1)} / ${n(R.sens,1)} / ${n(R.lat,1)} kW`,R.frosting?`incl. ${n(R.frostKW,2)} kW to freeze the frost`:''],
+   ['Coil face area at '+n(S.faceVel,2)+' m/s',`${n(R.faceArea,2)} m²`,''],
+   ['Indicative coil depth for CF '+n(R.CF,2),`${R.rows} row`,''],
+   ['Supply air mass flow',`${n(R.mda,3)} kg/s`,`${n(R.mda*3600,0)} kg/h dry air`],
+   ['Water brought in by the fresh air',mu(Math.max(0,R.oa_ls/1000/R.FAs.v*(R.FAs.W-R.room.W)*3600)),muOther(Math.max(0,R.oa_ls/1000/R.FAs.v*(R.FAs.W-R.room.W)*3600))],
+   ['Water generated inside the room',mu(R.latKgh),muOther(R.latKgh)],
+   ['Moisture removed at the coil',mu(R.cond),muOther(R.cond)],
+   [R.frosting?'Held as frost on the coil':'Condensate to drain',mu(R.cond),R.frosting?`ice at ${n(R.t_ADP,1)}°C · ${n(R.frostAcc.massKg,1)} kg after ${n(S.defrostH||8,1)} h`:`${n(R.cond*24,0)} l/day at the drain`]];
+  if(R.frosting) rows.push(['Defrost',`${n(R.frostAcc.defrostKWh,2)} kWh every ${n(S.defrostH||8,1)} h`,`${n(R.frostAcc.meltwaterL,1)} l meltwater · ${n(R.frostAcc.sensKWh,2)} kWh warming + ${n(R.frostAcc.meltKWh,2)} kWh melting`]);
+  if(S.coolSrc==='chw') rows.push(['Chilled water flow '+(S.glycol>0?'('+n(S.glycol,0)+'% glycol)':''),`${wu(R.chwFlow)}`,`at ${n(S.chwR-S.chwF,0)} K · ${n(S.chwF,1)}/${n(S.chwR,1)}°C`]);
+  else {rows.push(['DX evaporating temperature',`${n(S.evapT,1)} °C`,'']); rows.push(['DX absorbed power at EER '+n(S.dxEER,1),`${n(R.dxAbs,1)} kW`,`${n(R.amps(R.dxAbs),0)} A at 400 V`]);}
+  if(S.reheatSrc==='recover'&&R.reheat>0) rows.push(['Cooling duty with the run-around in service',`${n(R.total-R.reheat,1)} kW`,'']);
+  rows.push(['Cooling duty — gross at the coil',`${n(R.total,1)} kW`,'']);
+  rows.push(['Cooling duty — net into the space',`${n(R.netCool,1)} kW`,'']);
+  rows.push(['Supply fan and motor heat',`${n(R.fanKW,1)} kW`,`${n(R.fanRise,2)} K rise`]);
+  rows.push(['Fresh-air share of the cooling duty',`${n(R.oaLoad,1)} kW`,'']);
+  rows.push(['Reheat battery ('+(S.reheatSrc==='hotgas'?'hot gas':S.reheatSrc==='recover'?'run-around':S.reheatSrc)+')',`${n(R.reheat,1)} kW`,S.reheatSrc==='lphw'?wu(R.lphwFlow)+' LPHW':S.reheatSrc==='elec'?n(R.amps(R.reheat),0)+' A':R.reheatFree?'free':'']);
+  rows.push(['Winter heater battery ('+(S.heatSrc==='hp'?'heat pump':S.heatSrc)+')',`${n(R.heater,1)} kW`,S.heatSrc==='lphw'?wu(R.lphwHeatFlow)+' LPHW':S.heatSrc==='elec'?n(R.amps(R.heater),0)+' A':n(R.hpAbs,1)+' kW absorbed']);
+  rows.push(['Total electrical load (fans excluded)',`${n(R.elecTotal,1)} kW`,`${n(R.amps(R.elecTotal),0)} A at 400 V`]);
+  rows.push(['Winter supply temperature',`${n(R.ts_w,1)} °C`,'']);
+  rows.push(['Humidifier',R.humKgh>0?n(R.humKgh,1)+' kg/h':'not required',R.humKgh>0?(S.humid==='steam'?n(R.humkW,1)+' kW steam':'adiabatic'):'']);
+  rows.push(['Room loads carried',`${n(R.qs,1)} kW sensible`,`${n(R.latKgh,1)} kg/h moisture`]);
+  return rows;
 }
 
 let RES=null;
@@ -1319,19 +1582,233 @@ function refresh(){ try{
   RES=solve(S);
   try{ RES.alt=solve(Object.assign({},S,{rhMode:S.rhMode==='band'?'setpoint':'band'})); }catch(x){RES.alt=null;}
   buildResults(RES);}catch(e){console.error(e);} }
+function jobRef(){return (document.getElementById('jobName').value||'').trim();}
+function jobChanged(){document.title=(jobRef()?jobRef()+' · ':'')+'Room First · air & plant selection';}
 function saveFile(){
-  const blob=new Blob([JSON.stringify({app:'adi-room-first',schema:1,job:document.getElementById('jobName').value,airUnit:AU,waterUnit:WU,state:S},null,1)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({app:'adi-room-first',schema:2,job:jobRef(),airUnit:AU,waterUnit:WU,moistUnit:MU,mode:MODE,state:S},null,1)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download=(document.getElementById('jobName').value||'room-first')+'.json'; a.click();
+  a.download=(jobRef()||'room-first')+'.json'; a.click();
 }
 function loadFile(e){const f=e.target.files[0]; if(!f)return; const r=new FileReader();
-  r.onload=()=>{try{const d=JSON.parse(r.result); if(d.state)Object.assign(S,d.state);
+  r.onload=()=>{try{const d=JSON.parse(r.result);
+    if(d.state){
+      // schema 1 files carried a typed-in envelope area and no geometry mode — keep the number they had
+      if(d.state.envMode===undefined&&d.state.envArea!==undefined) d.state.envMode='manual';
+      Object.assign(S,d.state);}
     if(d.airUnit&&AIRUNITS[d.airUnit]){AU=d.airUnit; syncUnitButtons();}
     if(d.waterUnit&&WATERUNITS[d.waterUnit]){WU=d.waterUnit; syncWaterButtons();}
-    document.getElementById('jobName').value=d.job||''; buildInputs(); refresh();}catch(x){alert('That file is not a RoomFirst save.');}};
-  r.readAsText(f);}
+    if(d.moistUnit&&MOISTUNITS[d.moistUnit]){MU=d.moistUnit; syncMoistButtons();}
+    document.getElementById('jobName').value=d.job||''; jobChanged(); buildInputs(); refresh();}catch(x){alert('That file is not a RoomFirst save.');}};
+  r.readAsText(f); e.target.value='';}
 window.addEventListener('beforeprint',()=>document.querySelectorAll('details').forEach(d=>d.open=true));
-syncUnitButtons(); syncWaterButtons(); buildInputs(); refresh();
+applyTheme(theme()); syncUnitButtons(); syncWaterButtons(); syncMoistButtons(); buildInputs(); refresh();
+</script>
+
+<script>
+/* =====================================================================================
+   PDF report. jsPDF is fetched from the CDN the first time it is needed, so the page
+   itself stays a single file and works offline for everything except this button
+   (offline it falls back to the browser's own print-to-PDF). On phones and tablets the
+   finished PDF goes to the share sheet; on a desktop it downloads.
+   ===================================================================================== */
+const JSPDF_SRC='https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';
+function loadJsPDF(){
+  if(window.jspdf&&window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+  return new Promise((res,rej)=>{const s=document.createElement('script'); s.src=JSPDF_SRC; s.async=true;
+    s.onload=()=>window.jspdf&&window.jspdf.jsPDF?res(window.jspdf.jsPDF):rej(new Error('jsPDF missing'));
+    s.onerror=()=>rej(new Error('jsPDF failed to load')); document.head.appendChild(s);});
+}
+/* Helvetica in jsPDF only covers WinAnsi — swap the few symbols the page uses that fall outside it. */
+function pdfText(s){return String(s??'').replace(/<[^>]+>/g,'')
+  .replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+  .replace(/[\u202f\u00a0\u2009]/g,' ').replace(/\u2713|\u2714/g,'OK').replace(/\u2715|\u2716|\u2717/g,'X')
+  .replace(/\u221e/g,'infinity').replace(/\u2248/g,'~').replace(/\u2192/g,'->').replace(/\u0394/g,'delta ')
+  .replace(/\u2212/g,'-').replace(/\u2026/g,'...').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=').replace(/\u02dc/g,'~')
+  .replace(/\u263e|\u2600/g,'');}
+/* Rasterise an SVG string (drawn with the light palette) so it can be dropped into the PDF. */
+function svgToPng(svg,w,h,scale){
+  return new Promise((res,rej)=>{
+    const src=svg.replace(/<svg /,`<svg width="${w}" height="${h}" `).replace(/<svg([^>]*)>/,`<svg$1><rect width="${w}" height="${h}" fill="#ffffff"/>`);
+    const blob=new Blob([src],{type:'image/svg+xml;charset=utf-8'}), url=URL.createObjectURL(blob), img=new Image();
+    img.onload=()=>{try{const c=document.createElement('canvas'); c.width=Math.round(w*scale); c.height=Math.round(h*scale);
+      const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url); res(c.toDataURL('image/png'));}catch(e){URL.revokeObjectURL(url); rej(e);}};
+    img.onerror=e=>{URL.revokeObjectURL(url); rej(e);}; img.src=url;});
+}
+/* the current value of every visible input, as [label, value] — one list per section */
+function inputSummary(mode){
+  return SEC.filter(s=>s.mode===mode&&s.f.length).map(sec=>({title:sec.badge+' · '+sec.n, rows:sec.f.filter(f=>!(f.show&&!f.show(S))).map(f=>{
+    let v;
+    if(f.seg){const o=f.seg.find(o=>String(o[0])===String(S[f.k])); v=o?o[1]:String(S[f.k]);}
+    else if(f.sel){v=(f.sel[S[f.k]]||{}).n||String(S[f.k]);}
+    else if(f.au){v=fu(S[f.k])+'  ('+fother(S[f.k])+')';}
+    else v=n(S[f.k],Number.isInteger(S[f.k])?0:(String(S[f.k]).split('.')[1]||'').length)+(f.u?' '+f.u:'');
+    return [f.l,v];})}));
+}
+const PDFC={ink:'#0F1F2E',muted:'#5B7186',faint:'#D3DCE6',panel:'#F1F5F9',brand:'#1B6FD6',amber:'#B8690A',ok:'#1E8E52',warn:'#9C7500',bad:'#CC3B33',frost:'#1785B8'};
+function pdfLayout(doc,footer){
+  const PW=210,PH=297,M=14,CW=PW-2*M,FH=14;
+  const L={y:M,page:1,PW,PH,M,CW};
+  L.ensure=h=>{if(L.y+h>PH-M-FH){footer(L.page); doc.addPage(); L.page++; L.y=M;}};
+  L.gap=mm=>{L.y+=mm;};
+  L.title=(letter,title,sub,col)=>{L.ensure(24); doc.setFillColor(col||PDFC.brand); doc.roundedRect(M,L.y,7,7,1.5,1.5,'F');
+    doc.setFont('helvetica','bold'); doc.setTextColor('#fff'); doc.setFontSize(8.5); doc.text(pdfText(letter),M+3.5,L.y+4.9,{align:'center'});
+    doc.setTextColor(PDFC.ink); doc.setFontSize(12); doc.text(pdfText(title),M+10,L.y+5.2);
+    if(sub){const tw=doc.getTextWidth(pdfText(title)); doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(PDFC.muted); doc.text(pdfText(sub),M+10+tw+3,L.y+5.2);}
+    L.y+=9; doc.setDrawColor(PDFC.faint); doc.setLineWidth(0.25); doc.line(M,L.y,PW-M,L.y); L.y+=3;};
+  /* rows of [label, value, note]; wraps each cell and grows the row to fit */
+  L.rows=(rows,widths)=>{
+    const w=widths||[0.44,0.24,0.32], cw=w.map(x=>x*CW), lh=4.1;
+    rows.forEach(r=>{
+      doc.setFontSize(8.5);
+      const a=doc.splitTextToSize(pdfText(r[0]),cw[0]-2), b=doc.splitTextToSize(pdfText(r[1]),cw[1]-2), c=r[2]?doc.splitTextToSize(pdfText(r[2]),cw[2]-2):[];
+      const lines=Math.max(a.length,b.length,c.length,1), h=lines*lh+2.2;
+      L.ensure(h);
+      doc.setFont('helvetica','normal'); doc.setTextColor(PDFC.muted); doc.text(a,M,L.y+3.6);
+      doc.setFont('helvetica','bold'); doc.setTextColor(PDFC.ink); doc.text(b,M+cw[0]+cw[1]-1,L.y+3.6,{align:'right'});
+      if(c.length){doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(PDFC.muted); doc.text(c,M+CW,L.y+3.6,{align:'right'});}
+      L.y+=h; doc.setDrawColor(PDFC.faint); doc.setLineWidth(0.2); doc.line(M,L.y-0.6,PW-M,L.y-0.6);});
+    L.y+=2;};
+  /* a proper grid table: header row + cells, columns given as fractions */
+  L.table=(head,rows,widths,align)=>{
+    const cw=widths.map(x=>x*CW), lh=4.1;
+    const drawHead=()=>{doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(PDFC.muted); let x=M;
+      head.forEach((hh,i)=>{doc.text(pdfText(hh),align[i]==='r'?x+cw[i]-1:x+1,L.y+3.4,{align:align[i]==='r'?'right':'left'}); x+=cw[i];});
+      L.y+=5; doc.setDrawColor(PDFC.faint); doc.setLineWidth(0.3); doc.line(M,L.y,PW-M,L.y); L.y+=0.5;};
+    L.ensure(5+lh+3); drawHead();
+    rows.forEach(r=>{doc.setFontSize(8.5);
+      const cells=r.map((c,i)=>doc.splitTextToSize(pdfText(c),cw[i]-2)), lines=Math.max(...cells.map(c=>c.length),1), h=lines*lh+2;
+      if(L.y+h>PH-M-14){footer(L.page); doc.addPage(); L.page++; L.y=M; drawHead();}
+      let x=M; cells.forEach((c,i)=>{doc.setFont('helvetica',i===0?'normal':'normal'); doc.setTextColor(i===0?PDFC.ink:(align[i]==='m'?PDFC.muted:PDFC.ink));
+        doc.text(c,align[i]==='r'?x+cw[i]-1:x+1,L.y+3.5,{align:align[i]==='r'?'right':'left'}); x+=cw[i];});
+      L.y+=h; doc.setDrawColor(PDFC.faint); doc.setLineWidth(0.2); doc.line(M,L.y-0.5,PW-M,L.y-0.5);});
+    L.y+=2;};
+  L.para=(text,size,col)=>{doc.setFont('helvetica','normal'); doc.setFontSize(size||9); doc.setTextColor(col||PDFC.ink);
+    const lines=doc.splitTextToSize(pdfText(text),CW), h=lines.length*(size||9)*0.46+1; L.ensure(h); doc.text(lines,M,L.y+(size||9)*0.35); L.y+=h;};
+  L.checks=list=>{list.forEach(c=>{
+    doc.setFontSize(8.5); const tl=doc.splitTextToSize(pdfText(c.t),CW-9); doc.setFontSize(8); const xl=doc.splitTextToSize(pdfText(c.x),CW-9);
+    const h=tl.length*4.2+xl.length*3.7+2.4; L.ensure(h);
+    const col=c.lv==='ok'?PDFC.ok:c.lv==='warn'?PDFC.warn:PDFC.bad;
+    doc.setFillColor(col); doc.circle(M+2.2,L.y+2.6,1.8,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor('#fff'); doc.text(c.lv==='ok'?'OK':c.lv==='warn'?'!':'X',M+2.2,L.y+3.4,{align:'center'});
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(PDFC.ink); doc.text(tl,M+7,L.y+3.6);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(PDFC.muted); doc.text(xl,M+7,L.y+3.6+tl.length*4.2);
+    L.y+=h; doc.setDrawColor(PDFC.faint); doc.setLineWidth(0.2); doc.line(M,L.y-0.6,PW-M,L.y-0.6);}); L.y+=2;};
+  L.image=(png,wPx,hPx,widthMm)=>{const wm=widthMm||CW, hm=wm*hPx/wPx; L.ensure(hm+2); doc.addImage(png,'PNG',M+(CW-wm)/2,L.y,wm,hm); L.y+=hm+3;};
+  L.chips=chips=>{const cwid=(CW-4*(chips.length-1))/chips.length, ch=15; L.ensure(ch+4);
+    chips.forEach((c,i)=>{const x=M+i*(cwid+4); doc.setFillColor(PDFC.panel); doc.roundedRect(x,L.y,cwid,ch,2,2,'F');
+      doc.setFillColor(c.col||PDFC.brand); doc.rect(x,L.y+3,1.4,ch-6,'F');
+      doc.setTextColor(PDFC.muted); doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.text(pdfText(c.k),x+4,L.y+5);
+      doc.setTextColor(PDFC.ink); doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(pdfText(c.v),x+4,L.y+11.2);
+      if(c.s){doc.setFont('helvetica','normal'); doc.setFontSize(6.8); doc.setTextColor(PDFC.muted); doc.text(pdfText(c.s),x+cwid-3,L.y+11.2,{align:'right'});}});
+    L.y+=ch+6;};
+  return L;
+}
+async function buildPdfDoc(jsPDF){
+  const doc=new jsPDF({unit:'mm',format:'a4',compress:true});
+  const ref=jobRef(), when=new Date().toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'});
+  const modeName={design:'Design',site:'Site check',sense:'Sense check'}[MODE];
+  doc.setProperties({title:(ref?ref+' — ':'')+'RoomFirst '+modeName+' report',subject:'Air and plant selection from the room condition',creator:'RoomFirst'});
+  const footer=page=>{const y=doc.internal.pageSize.getHeight()-14-10+4;
+    doc.setDrawColor(PDFC.faint); doc.setLineWidth(0.25); doc.line(14,y,196,y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.8); doc.setTextColor(PDFC.muted);
+    const txt=doc.splitTextToSize(pdfText('RoomFirst · moist-air properties to the ASHRAE Hyland–Wexler formulation, saturation over ice below 0°C; frosted coils include the heat of fusion (333.6 kJ/kg) and ice sub-cooling. Steady state, fully mixed, single zone. Design-point figures — confirm coil selections with the manufacturer and design weather with CIBSE Guide A.'),150);
+    doc.text(txt,14,y+3.2); doc.setFont('helvetica','bold'); doc.text('Page '+page,196,y+3.2,{align:'right'});
+    doc.setFont('helvetica','normal'); doc.text(pdfText(ref||'RoomFirst'),196,y+6.4,{align:'right'});};
+  const L=pdfLayout(doc,footer);
+
+  // title band
+  doc.setFillColor(PDFC.brand); doc.roundedRect(L.M,L.y,L.CW,24,2.5,2.5,'F');
+  doc.setTextColor('#fff'); doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.text('RoomFirst',L.M+6,L.y+10);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(pdfText('air & plant selection · '+modeName+' report'),L.M+6,L.y+16.5);
+  doc.setFontSize(8); doc.text('Generated',L.PW-L.M-6,L.y+9,{align:'right'}); doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text(pdfText(when),L.PW-L.M-6,L.y+14,{align:'right'});
+  L.gap(30);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(PDFC.muted); doc.text('PROJECT / ROOM REFERENCE',L.M,L.y+3); L.gap(4.5);
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(ref?PDFC.ink:PDFC.muted);
+  const rl=doc.splitTextToSize(pdfText(ref||'No project reference entered'),L.CW); doc.text(rl,L.M,L.y+5); L.gap(rl.length*6.2+4);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(PDFC.muted);
+  doc.text(pdfText(`Units on this report: air ${auN()} · water ${wuN()} · moisture ${muN()}`),L.M,L.y+3); L.gap(7);
+
+  const inputs=inputSummary(MODE);
+  if(MODE==='design'){
+    const R=RES, C=checks(R), worst=C.some(c=>c.lv==='bad')?'bad':C.some(c=>c.lv==='warn')?'warn':'ok';
+    L.chips([{k:'DESIGN AIRFLOW',v:fu(R.flow),s:fother(R.flow)},
+      {k:'AIR CHANGES',v:n(R.ach,1)+' ac/h',s:n(R.achFresh,2)+' fresh'},
+      {k:'COOLING COIL',v:n(R.total,1)+' kW',s:n(R.sens,1)+' / '+n(R.lat,1)},
+      {k:R.frosting?'FROST ON COIL':'CONDENSATE',v:mu(R.cond),s:muOther(R.cond),col:R.frosting?PDFC.frost:PDFC.brand},
+      {k:'ROOM ACHIEVED',v:n(R.roomAct.t,1)+'°C / '+n(Math.min(R.roomAct.rh*100,100),0)+'%',s:worst==='ok'?'holds':worst==='warn'?'review':'will not hold',col:worst==='ok'?PDFC.ok:worst==='warn'?PDFC.warn:PDFC.bad}]);
+    inputs.forEach(sec=>{L.title(sec.title.split(' · ')[0],sec.title.split(' · ')[1],'inputs'); L.rows(sec.rows,[0.6,0.4,0]);});
+    L.title('A','The arrangement','summer design condition');
+    FORCE_LIGHT=true; let sch,chs; try{sch=schematic(R,true); chs=chart(R);} finally{FORCE_LIGHT=false;}
+    try{L.image(await svgToPng(sch,760,484,2.5),760,484);}catch(e){L.para('Schematic could not be rendered in this browser.',8,PDFC.muted);}
+    L.title('B','What sets the airflow',`${n(R.ach,1)} ac/h total · ${n(R.achFresh,2)} ac/h fresh on ${n(R.V,0)} m³`);
+    L.rows(ladderRows(R));
+    const drv=S.flowMode==='fixed'?(Object.keys(R.shortfall).length?`${fu(R.flow)} does not cover everything — short on ${Object.keys(R.shortfall).map(k=>DRV[k][0].toLowerCase()+' ('+fu(R.shortfall[k])+')').join(', ')}.`:`${fu(R.flow)} covers every requirement; the largest is ${DRV[R.driver][0].toLowerCase()} at ${fu(R.cand[R.driver]||0)}.`)
+      :R.driver==='latent-impossible'?`No airflow will hold this humidity: with a contact factor of ${n(R.CF,2)} and ${SRC()} the coil bottoms out at ${n(R.WoffMin*1000,2)} g/kg against a room limit of ${n(R.Wdeh*1000,2)} g/kg.`
+      :`${DRV[R.driver][0]} sets the airflow at ${fu(R.flow)} — ${DRV[R.driver][1]}. That is ${n(R.ach,1)} air changes an hour, ${n(R.oaPct,0)}% fresh air (${fu(R.oa_ls)}, ${n(R.achFresh,2)} ac/h).`;
+    L.para(drv,9); L.gap(2);
+    L.title('C','Does it hold the room',C.filter(c=>c.lv!=='ok').length+' to look at'); L.checks(C);
+    L.title('D','The air path','');
+    L.table(['Point','°C','%RH','g/kg','kJ/kg','DP °C',''],airPath(R).map(p=>[p[0],n(p[1].t,1),n(p[1].rh*100,0),n(p[1].W*1000,2),n(p[1].h,1),n(p[1].dp,1),p[2]||'']),[0.32,0.1,0.1,0.1,0.1,0.1,0.18],['l','r','r','r','r','r','m']);
+    L.rows([['Moisture removed at the coil',mu(R.cond),muOther(R.cond)],
+      ['Liquid to drain',mu(R.frosting?0:R.cond),R.frosting?'coil surface below 0°C':n(R.cond*24,0)+' l/day'],
+      ['Held as frost',mu(R.frosting?R.cond:0),R.frosting?`ice at ${n(R.t_ADP,1)}°C · ${n(R.frostAcc.massKg,1)} kg after ${n(S.defrostH||8,1)} h · ${n(R.frostAcc.defrostKWh,2)} kWh to defrost`:'coil above 0°C']]);
+    L.title('E','The chart','summer process, coil line, winter, tolerance box');
+    try{L.image(await svgToPng(chs,620,400,2.5),620,400,150);}catch(e){L.para('Chart could not be rendered in this browser.',8,PDFC.muted);}
+    L.title('F','Recommended equipment','what to specify and buy'); L.rows(equipRows(R));
+  } else if(MODE==='site'){
+    const Q=surveyCalc(), C=surveyChecks(Q), worst=C.some(c=>c.lv==='bad')?'bad':C.some(c=>c.lv==='warn')?'warn':'ok';
+    L.chips([{k:'MEASURED AIRFLOW',v:fu(S.svFlow),s:fother(S.svFlow)},{k:'ROOM SENSIBLE',v:n(Q.sens,1)+' kW'},{k:'ROOM LATENT',v:n(Q.lat,1)+' kW',s:mu(Q.moist)},
+      {k:'ROOM',v:n(Q.ret.t,1)+'°C / '+n(Q.ret.rh*100,0)+'%',s:worst==='ok'?'as expected':worst==='warn'?'check':'out of spec',col:worst==='ok'?PDFC.ok:worst==='warn'?PDFC.warn:PDFC.bad}]);
+    inputs.forEach(sec=>{L.title(sec.title.split(' · ')[0],sec.title.split(' · ')[1],'readings'); L.rows(sec.rows,[0.6,0.4,0]);});
+    L.title('1','What the room is doing',''); L.rows(surveyRows(Q));
+    L.title('2','Sense check',C.filter(c=>c.lv!=='ok').length+' to look at'); L.checks(C);
+    L.title('3','The readings on the chart','');
+    L.table(['Point','°C','%RH','g/kg','kJ/kg','DP °C','WB °C'],surveyStates(Q).map(p=>[p[0],n(p[1].t,1),n(p[1].rh*100,0),n(p[1].W*1000,2),n(p[1].h,1),n(p[1].dp,1),n(p[1].wb,1)]),[0.34,0.11,0.11,0.11,0.11,0.11,0.11],['l','r','r','r','r','r','r']);
+    FORCE_LIGHT=true; let chs; try{chs=surveyChart(Q);} finally{FORCE_LIGHT=false;}
+    try{L.image(await svgToPng(chs,620,344,2.5),620,344,150);}catch(e){}
+  } else {
+    const Q=senseCalc(), a=Q.a, b=Q.b;
+    L.chips([{k:'AIR',v:n(SENSE.t,1)+'°C / '+n(SENSE.rh,0)+'%',s:n(a.W*1000,2)+' g/kg'},{k:'COOLED TO',v:n(SENSE.c,1)+'°C',s:n(b.rh*100,0)+'% RH'},
+      {k:'AIRFLOW',v:fu(SENSE.f),s:fother(SENSE.f)},{k:Q.frosting?'HELD AS FROST':'WATER REMOVED',v:mu(Q.waterKgh),s:muOther(Q.waterKgh),col:Q.frosting?PDFC.frost:PDFC.brand}]);
+    L.title('~','Where that air sits','');
+    L.rows([['Dry bulb',n(a.t,1)+' °C'],['Relative humidity',n(a.rh*100,0)+' %'],['Moisture content',n(a.W*1000,2)+' g/kg'],[a.dp<0?'Frost point':'Dew point',n(a.dp,1)+' °C'],
+      ['Wet bulb',n(a.wb,1)+' °C'],['Enthalpy',n(a.h,1)+' kJ/kg'],['Density',n(1/a.v,3)+' kg/m³'],['Air mass flow',n(Q.mda,3)+' kg/s',n(Q.mda*3600,0)+' kg/h']]);
+    L.title('~','Cooled to '+n(SENSE.c,1)+'°C','');
+    L.rows([['Leaving RH',n(b.rh*100,0)+' %',Q.cooled?(Q.frosting?'saturated — freezes on the surface':'saturated — water drops out'):'no condensation'],
+      ['Moisture removed',n(Q.drop,2)+' g/kg'],[Q.frosting?'Held as frost':'Water to drain',mu(Q.waterKgh),muOther(Q.waterKgh)],
+      ...(Q.frosting?[['Frost after 8 h',n(Q.frostAcc.massKg,1)+' kg',n(Q.frostAcc.defrostKWh,2)+' kWh to defrost']]:[]),
+      ['Cooling duty',n(Q.kW,2)+' kW',Q.frosting?'incl. '+n(Q.frostKW,2)+' kW frost load':''],['Sensible / latent',n(Q.sensKW,1)+' / '+n(Q.latKW,1)+' kW',n(Q.dh,1)+' kJ/kg']]);
+    FORCE_LIGHT=true; let chs; try{chs=senseChart(a,b,Q.cooled);} finally{FORCE_LIGHT=false;}
+    try{L.image(await svgToPng(chs,620,320,2.5),620,320,150);}catch(e){}
+  }
+  footer(L.page);
+  return doc;
+}
+let PDF_BUSY=false;
+async function exportPDF(){
+  if(PDF_BUSY) return; PDF_BUSY=true;
+  const btn=document.getElementById('pdfBtn'); if(btn){btn.disabled=true; btn.textContent='PDF…';}
+  try{
+    let jsPDF; try{jsPDF=await loadJsPDF();}catch(e){
+      toast('Could not reach the PDF library (offline?) — using the browser print dialog: choose "Save as PDF".',5000);
+      setTimeout(()=>window.print(),400); return;}
+    toast('Building the PDF…',1500);
+    const doc=await buildPdfDoc(jsPDF);
+    const safe=(jobRef()||'room-first').replace(/[^\w\-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60)||'room-first';
+    const fn=`${safe}-${MODE}.pdf`, blob=doc.output('blob');
+    const touch=matchMedia('(pointer: coarse)').matches||/iPad|iPhone|iPod|Android/.test(navigator.userAgent);
+    if(touch&&navigator.share&&navigator.canShare){
+      const file=new File([blob],fn,{type:'application/pdf'});
+      if(navigator.canShare({files:[file]})){
+        try{await navigator.share({files:[file],title:jobRef()||'RoomFirst report'}); toast('PDF handed to the share sheet'); return;}
+        catch(e){if(e&&e.name==='AbortError') return;}
+      }
+    }
+    doc.save(fn); toast('PDF saved: '+fn);
+  }catch(e){console.error(e); toast('Could not create the PDF — '+(e&&e.message||'unknown error'),5000);}
+  finally{PDF_BUSY=false; if(btn){btn.disabled=false; btn.textContent='PDF';}}
+}
 </script>
 
 </body>
