@@ -1249,13 +1249,14 @@ function schematic(R,forPdf){
   g+=val(486,232,`of which ${n(R.qs-R.occSensKW,1)} kW plant and fabric`,MU,11);
   if(S.procLatent>0){g+=lab(374,254,'PROCESS MOISTURE',MU);g+=val(534,254,`${n(S.procLatent,1)} kg/h`,IN,12);}
   g+=`<line x1="374" y1="266" x2="690" y2="266" stroke="${C.rule}"/>`;
-  g+=val(374,284,`${n(S.roomArea,0)} m² × ${n(S.roomHeight,1)} m = ${n(R.V,0)} m³ · ${n(R.ach,1)} ac/h total · ${n(R.achFresh,2)} ac/h fresh`,MU,10.5);
+  g+=val(374,284,`${n(S.roomArea,0)} m² × ${n(S.roomHeight,1)} m = ${n(R.V,0)} m³ · ${n(R.ach,1)} ac/h · ${n(R.achFresh,2)} fresh`,MU,10.5);
   g+=val(374,301,(S.extract>0?`LEV ${fu(S.extract)} · `:'')+bal(R),R.leakOut<-0.5?RD:R.leakOut>0.5?BR:MU,10.5);
   if(R.leakOut>0.5) g+=lab(712,196,'OUT',BR,10);
 
   // AHU
   g+=box(12,356,696,116,C.ahuLine,C.ahuFill);
   g+=lab(24,374,'AIR HANDLING UNIT',MU);
+  if(R.cond>0.005) g+=val(162,375,R.frosting?`frost ${mu(R.cond)} held on the coil · ${n(R.frostAcc.massKg,0)} kg in ${n(S.defrostH||8,0)} h`:`condensate ${mu(R.cond)} to drain`,R.frosting?CO:MU,10.5);
   const comp=(x,w,ttl,col,l1,l1s,l2,l3)=>{let s=box(x,384,w,80,col);
     s+=lab(x+12,402,ttl,col);
     if(l1)s+=big(x+12,426,l1,IN,l1s||19);
@@ -1263,8 +1264,8 @@ function schematic(R,forPdf){
     if(l3)s+=val(x+12,458,l3,MU,10);
     return s;};
   g+=comp(22,132,'MIX',IN,`${n(pctF,0)}% fresh`,16,`${n(100-pctF,0)}% return air`,stl(R.E));
-  g+=comp(162,152,(S.coolSrc==='dx'?'DX COIL':'COOLING COIL')+(R.frosting?' · FROSTED':''),CO,`${n(R.total,1)} kW`,19,
-      `${n(R.sens,1)} sens / ${n(R.lat,1)} lat · ${R.frosting?'frost':'drain'} ${mu(R.cond)}`,`off ${n(R.off.t,1)}°C ${n(R.off.rh*100,0)}% · ADP ${n(R.t_ADP,1)}°C`);
+  g+=comp(162,152,R.frosting?(S.coolSrc==='dx'?'DX COIL · FROSTED':'COIL · FROSTED'):(S.coolSrc==='dx'?'DX COIL':'COOLING COIL'),CO,`${n(R.total,1)} kW`,19,
+      `${n(R.sens,1)} sens / ${n(R.lat,1)} lat`,`off ${n(R.off.t,1)}°C ${n(R.off.rh*100,0)}% · ADP ${n(R.t_ADP,1)}°C`);
   g+=comp(324,116,'REHEAT',R.reheat>0?AM:MU,R.reheat>0?`${n(R.reheat,1)} kW`:'none',R.reheat>0?19:14,
       R.reheat>0?(S.reheatSrc==='hotgas'?'hot gas':S.reheatSrc==='recover'?'run-around':S.reheatSrc==='elec'?'electric':'LPHW'):'not required',
       R.reheat>0&&R.reheatFree?'free to run':'');
@@ -1695,12 +1696,14 @@ function pdfLayout(doc,footer){
     doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(PDFC.muted); doc.text(xl,M+7,L.y+3.6+tl.length*4.2);
     L.y+=h; doc.setDrawColor(PDFC.faint); doc.setLineWidth(0.2); doc.line(M,L.y-0.6,PW-M,L.y-0.6);}); L.y+=2;};
   L.image=(png,wPx,hPx,widthMm)=>{const wm=widthMm||CW, hm=wm*hPx/wPx; L.ensure(hm+2); doc.addImage(png,'PNG',M+(CW-wm)/2,L.y,wm,hm); L.y+=hm+3;};
-  L.chips=chips=>{const cwid=(CW-4*(chips.length-1))/chips.length, ch=15; L.ensure(ch+4);
+  L.chips=chips=>{const cwid=(CW-4*(chips.length-1))/chips.length, ch=20; L.ensure(ch+4);
     chips.forEach((c,i)=>{const x=M+i*(cwid+4); doc.setFillColor(PDFC.panel); doc.roundedRect(x,L.y,cwid,ch,2,2,'F');
       doc.setFillColor(c.col||PDFC.brand); doc.rect(x,L.y+3,1.4,ch-6,'F');
-      doc.setTextColor(PDFC.muted); doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.text(pdfText(c.k),x+4,L.y+5);
-      doc.setTextColor(PDFC.ink); doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(pdfText(c.v),x+4,L.y+11.2);
-      if(c.s){doc.setFont('helvetica','normal'); doc.setFontSize(6.8); doc.setTextColor(PDFC.muted); doc.text(pdfText(c.s),x+cwid-3,L.y+11.2,{align:'right'});}});
+      doc.setTextColor(PDFC.muted); doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.text(pdfText(c.k),x+4,L.y+4.8);
+      doc.setTextColor(PDFC.ink); doc.setFont('helvetica','bold');
+      let fs=11; doc.setFontSize(fs); while(doc.getTextWidth(pdfText(c.v))>cwid-6&&fs>7){fs-=0.5; doc.setFontSize(fs);}
+      doc.text(pdfText(c.v),x+4,L.y+11.4);
+      if(c.s){doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(PDFC.muted); doc.text(doc.splitTextToSize(pdfText(c.s),cwid-6)[0],x+4,L.y+16.6);}});
     L.y+=ch+6;};
   return L;
 }
@@ -1738,7 +1741,7 @@ async function buildPdfDoc(jsPDF){
       {k:R.frosting?'FROST ON COIL':'CONDENSATE',v:mu(R.cond),s:muOther(R.cond),col:R.frosting?PDFC.frost:PDFC.brand},
       {k:'ROOM ACHIEVED',v:n(R.roomAct.t,1)+'°C / '+n(Math.min(R.roomAct.rh*100,100),0)+'%',s:worst==='ok'?'holds':worst==='warn'?'review':'will not hold',col:worst==='ok'?PDFC.ok:worst==='warn'?PDFC.warn:PDFC.bad}]);
     inputs.forEach(sec=>{L.title(sec.title.split(' · ')[0],sec.title.split(' · ')[1],'inputs'); L.rows(sec.rows,[0.6,0.4,0]);});
-    L.title('A','The arrangement','summer design condition');
+    L.ensure(14+L.CW*484/760); L.title('A','The arrangement','summer design condition');
     FORCE_LIGHT=true; let sch,chs; try{sch=schematic(R,true); chs=chart(R);} finally{FORCE_LIGHT=false;}
     try{L.image(await svgToPng(sch,760,484,2.5),760,484);}catch(e){L.para('Schematic could not be rendered in this browser.',8,PDFC.muted);}
     L.title('B','What sets the airflow',`${n(R.ach,1)} ac/h total · ${n(R.achFresh,2)} ac/h fresh on ${n(R.V,0)} m³`);
@@ -1753,7 +1756,7 @@ async function buildPdfDoc(jsPDF){
     L.rows([['Moisture removed at the coil',mu(R.cond),muOther(R.cond)],
       ['Liquid to drain',mu(R.frosting?0:R.cond),R.frosting?'coil surface below 0°C':n(R.cond*24,0)+' l/day'],
       ['Held as frost',mu(R.frosting?R.cond:0),R.frosting?`ice at ${n(R.t_ADP,1)}°C · ${n(R.frostAcc.massKg,1)} kg after ${n(S.defrostH||8,1)} h · ${n(R.frostAcc.defrostKWh,2)} kWh to defrost`:'coil above 0°C']]);
-    L.title('E','The chart','summer process, coil line, winter, tolerance box');
+    L.ensure(14+150*400/620); L.title('E','The chart','summer process, coil line, winter, tolerance box');
     try{L.image(await svgToPng(chs,620,400,2.5),620,400,150);}catch(e){L.para('Chart could not be rendered in this browser.',8,PDFC.muted);}
     L.title('F','Recommended equipment','what to specify and buy'); L.rows(equipRows(R));
   } else if(MODE==='site'){
@@ -1763,7 +1766,7 @@ async function buildPdfDoc(jsPDF){
     inputs.forEach(sec=>{L.title(sec.title.split(' · ')[0],sec.title.split(' · ')[1],'readings'); L.rows(sec.rows,[0.6,0.4,0]);});
     L.title('1','What the room is doing',''); L.rows(surveyRows(Q));
     L.title('2','Sense check',C.filter(c=>c.lv!=='ok').length+' to look at'); L.checks(C);
-    L.title('3','The readings on the chart','');
+    L.ensure(14+40+150*344/620); L.title('3','The readings on the chart','');
     L.table(['Point','°C','%RH','g/kg','kJ/kg','DP °C','WB °C'],surveyStates(Q).map(p=>[p[0],n(p[1].t,1),n(p[1].rh*100,0),n(p[1].W*1000,2),n(p[1].h,1),n(p[1].dp,1),n(p[1].wb,1)]),[0.34,0.11,0.11,0.11,0.11,0.11,0.11],['l','r','r','r','r','r','r']);
     FORCE_LIGHT=true; let chs; try{chs=surveyChart(Q);} finally{FORCE_LIGHT=false;}
     try{L.image(await svgToPng(chs,620,344,2.5),620,344,150);}catch(e){}
