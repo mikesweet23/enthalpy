@@ -271,6 +271,13 @@ svg{display:block;width:100%;height:auto}
 .lead3>div:last-child{border-right:0}
 .lead3 .k{font-family:var(--cond);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
 .lead3 .v{font-size:14.5px;font-weight:600;margin-top:3px;line-height:1.4}
+.findlink{display:block;padding:2px 0;color:var(--ink)}
+.findlink b{display:inline-block;min-width:18px}
+.fix{display:block;margin-top:4px;padding:6px 8px;border-left:3px solid var(--amber);background:rgba(180,120,20,.08);border-radius:0 6px 6px 0;color:var(--ink)}
+.golink{margin-top:6px;padding:3px 10px;border:1px solid var(--line2);border-radius:20px;background:none;color:var(--brand);font-size:12.5px;cursor:pointer}
+.tools{display:flex;gap:8px;margin:10px 0 2px}
+.tools button{padding:5px 12px;border:1px solid var(--line2);border-radius:20px;background:none;color:var(--ink);font-size:12.5px;cursor:pointer}
+.tools button.primary{background:var(--brand);border-color:var(--brand);color:#fff}
 .statline{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--rule);font-size:13px}
 .statline:last-child{border-bottom:0}
 .st-ic{font-family:var(--mono);font-weight:700;font-size:12px;min-width:22px;text-align:center;border:1px solid currentColor;border-radius:5px;padding:1px 0}
@@ -421,6 +428,14 @@ const COILPRESETS={
  chw8:{short:'CHW 8R',cf:0.96,ex:'Labs, cleanrooms, tropical fresh-air handling',d:'Eight rows for a close approach and high latent capacity at 6/12\u00b0C.',adp:'about 8\u00b0C'},
  freezer:{short:'Freezer',cf:0.85,ex:'Cold stores, blast freezers, freezer-room coolers',d:'Surface well below 0\u00b0C — moisture freezes on and must be defrosted. Pair with a low evaporating temperature.',adp:'about -25\u00b0C'},
  custom:{short:'Custom',cf:0.90,ex:'Manufacturer selection data',d:'Type the contact factor from the selection below.',adp:'as selected'}};
+/* DX presets only belong on DX cooling, chilled-water presets on chilled water. The
+   coil menu is filtered on this; anything saved against the other source is remapped. */
+['dx3','dx4','dx5','dx6','freezer'].forEach(k=>COILPRESETS[k].src='dx');
+['chw6','chw8'].forEach(k=>COILPRESETS[k].src='chw');
+COILPRESETS.custom.src='any';
+function coilOptOK(k){const p=COILPRESETS[k]; if(!p||p.src==='any') return true; return S.coolSrc==='dx'?p.src==='dx':p.src==='chw';}
+function coilDefault(){return S.coolSrc==='dx'?'dx4':'chw6';}
+function alignCoilPreset(){if(!coilOptOK(S.coilPreset)){S.coilPreset=coilDefault(); S.CF=COILPRESETS[S.coilPreset].cf;}}
 /* Open-bath evaporation (ASHRAE Handbook \u2014 HVAC Applications, Ch.6 Eq.2, SI form):
    kg/h = 0.0457 \u00b7 area \u00b7 activity \u00b7 (Psat(water) \u2212 Pair), pressures in kPa.
    Approximate \u2014 still baths at the low end, agitated process tanks vary widely. */
@@ -1050,6 +1065,7 @@ function migrateState(d){
     for(const k in COILPRESETS){const dd=Math.abs((d.CF||0.9)-COILPRESETS[k].cf); if(dd<bd&&k!=='custom'){bd=dd;best=k;}}
     d.coilPreset=bd<0.015?best:'custom';
   }
+  if(d.coilPreset!=='custom'&&COILPRESETS[d.coilPreset]&&((d.coolSrc==='dx')!==(COILPRESETS[d.coilPreset].src==='dx'))) d.coilPreset=d.coolSrc==='dx'?'dx4':'chw6';
   return d;
 }
 /* One-line summary of the specialist assumptions currently in force. */
@@ -1129,7 +1145,7 @@ function fieldHTML(f){
       f.seg.map(o=>`<button type="button" data-k="${f.k}" data-v="${o[0]}" aria-pressed="${String(S[f.k])===String(o[0])}">${o[1]}</button>`).join('')+`</div></div>`;
   } else if(f.sel){
     return `<div class="field"><label for="in-${f.k}">${f.l}</label><select id="in-${f.k}" data-k="${f.k}">`+
-      Object.keys(f.sel).map(k=>`<option value="${k}" ${S[f.k]===k?'selected':''}>${f.sel[k].n}</option>`).join('')+`</select></div>`;
+      (f.k==='coilPreset'?Object.keys(f.sel).filter(coilOptOK):Object.keys(f.sel)).map(k=>`<option value="${k}" ${S[f.k]===k?'selected':''}>${f.sel[k].n}</option>`).join('')+`</select></div>`;
   } else if(f.au){
     return `<div class="field"><label for="in-${f.k}">${f.l}</label><input id="in-${f.k}" type="number" step="${auStep(f.st)}" data-k="${f.k}" data-au="1" value="${auVal(S[f.k])}" aria-describedby="h-${f.k}">`+
        (AU==='m3s'?`<span class="u">${auN()}</span>`:'')+auTog()+`</div>`;
@@ -1163,7 +1179,7 @@ function buildInputs(){
         const dep=f.show?` dep`:'', why=f.show&&f.why?`<div class="why">↳ ${f.why}</div>`:'';
         h+=`<div class="fw${alt%2?' alt':''}${dep}" data-k="${f.k}">`+why+fieldHTML(f)+(f.h?`<div class="hint" id="h-${f.k}">${hintText(f)}</div>`:'')+`</div>`; alt++;
       });
-      h+=`</div></details>`;
+      h+=`<div class="tools"><button type="button" onclick="resetSec('${sec.id}')">Reset this section</button>${sec.id==='plant'?`<button type="button" class="primary" title="Picks the shallowest coil of this cooling type that holds the humidity, and adds the frost coil if the weather needs one. Everything stays overridable." onclick="autoSelect()">Auto-select from the loads</button>`:''}</div></div></details>`;
     });
     const idx=STAGES.findIndex(s=>s[0]===STAGE);
     h+=`<div class="stepnav">`+
@@ -1881,11 +1897,63 @@ function chart(R){
   return `<svg viewBox="0 0 620 400" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
 }
 
+/* Findings engine: every outstanding check gets a number, the input section that
+   fixes it, and a concrete action. Prefix-matched on the title so wording tweaks
+   do not break the mapping. [prefix, section id, action or (R)=>action] */
+const FIXMAP=[
+ ['Example project','arrange','Make it your own under Stage 1 — your room, loads, weather and arrangement — then confirm the weather.'],
+ ['Design weather is not confirmed','out','Confirm the figures under 05 Location and design weather against current CIBSE Guide A / TRY-DSY data.'],
+ ['The unit airflow does not meet','air',R=>`Cover the largest shortfall — ${Object.keys(R.shortfall).map(k=>k+' '+fu(R.shortfall[k])).join(', ')} — with a bigger unit, or narrow the requirement that sets it (see What sets the airflow).`],
+ ['Supply air must go colder','air','Widen the supply-temperature limit if the diffusers allow it, or raise the airflow basis so the coil need not go so cold.'],
+ ['Fresh air is below','air',R=>`Raise fresh air to cover ${fu(R.shortfall.fresh)} — per-person rate, sizing scenario, or % of supply.`],
+ ['The room will not hold pressure','air',R=>`Cover the ${fu(R.shortfall.pressure)} the extract needs, or add a make-up path — the room otherwise pulls dirty air in.`],
+ ['Rated cooling capacity is short','cap',R=>`Select a bigger unit — rated cooling must reach ${n(R.total,1)} kW at these conditions — or cut the room load.`],
+ ['Rated heating capacity is short','cap',R=>`Raise the heater selection to ${n(R.heater,1)} kW at winter design, or accept a lower winter room temperature.`],
+ ['Equipment cooling capacity not verified','cap','Enter the manufacturer rated cooling duty under 08 Equipment check, with the conditions it applies at.'],
+ ['Equipment heating capacity not verified','cap','Enter the manufacturer rated heating duty under 08 Equipment check, with the conditions it applies at.'],
+ ['Humidity target unreachable','plant','Pick a deeper coil (higher contact factor) or a colder water/evaporating temperature — no airflow fixes supply air wetter than the room allows. Try Auto-select from the loads.'],
+ ['Coil cannot reach the apparatus dew point','plant','Lower the water flow or evaporating temperature, or accept a higher ADP and re-check the room result.'],
+ ['Room would run saturated','plant','Deepen the coil or cut the moisture load — saturated air means condensation on surfaces.'],
+ ['Room does not hold','plant','Cut the driving load or deepen the coil, then confirm this check again (see What sets the airflow).'],
+ ['Room sits outside','plant','Cut the driving load or deepen the coil, then confirm this check again (see What sets the airflow).'],
+ ['Face velocity','plant','Add coil face area or rows to get to 2.5 m/s or below, or fit eliminators.'],
+ ['Supply air is very cold','air','Move more air for the same duty, or confirm high-induction diffusers — cold dumping brings complaints.'],
+ ['The fresh air fogs','plant','Preheat the fresh air toward the return condition, or reduce the fresh-air fraction at winter design.'],
+ ['The coil runs frosted','plant','Keep the coil surface above 0C or add timed defrost with meltwater drainage and count the defrost energy.'],
+ ['More air leaves than enters','extract','Spill less exhaust at the unit or add a make-up air path — fresh minus exhaust minus extract must close.'],
+ ['Coil choice does not match','plant','Switch Coil choice to this cooling type above, or Custom with the selected contact factor.'],
+ ['Heat recovery has nothing','extract','Spill exhaust at the unit for the recovery to work against, or set recovery back to None.'],
+ ['Off-design check','plant','Make the coil dry without overcooling: deepen the coil, lower the water temperature, or add reheat — then re-check this mild damp point.'],
+ ['Air alone will not heat','plant',R=>`Cover the ${n(R.heatShort,1)} kW shortfall with heater battery, or accept a cooler winter room.`],
+ ['No humidifier selected','plant',R=>`Select humidification for ${n(R.humKgh,1)} kg/h, or drop the winter humidity target.`],
+ ['Evaporating temperature will frost','plant','Add hot-gas or reverse-cycle defrost, or keep evaporating at 1C or above.'],
+ ['Electric reheat','plant',R=>`Move reheat to LPHW, run-around or hot gas — or confirm the incomer takes about ${n(R.amps(R.reheat),0)} A extra.`],
+ ['Frost coil is short','frost',R=>`Raise the rated duty to at least ${n(R.frostSuggest,1)} kW (next coil size up), or the recovery and cooling coil behind it will freeze.`],
+ ['Frost coil duty is suggested','frost','Type the selected coil rated duty under 07 Frost protection to confirm it — until then this stays a working figure.'],
+ ['Frost coil selected but no duty','frost',R=>`Enter the rated duty — about ${n(R.frostSuggest,1)} kW holds the winter fresh air at +5C.`],
+ ['Frost protection is still required','frost',R=>`Add a frost coil under 07 Frost protection (about ${n(R.frostSuggest,1)} kW) or describe the strategy — nothing here passes without it.`]
+];
+function decorateChecks(C,R){C.forEach(c=>{for(const m of FIXMAP){if(c.t.indexOf(m[0])===0){c.sec=c.sec||m[1]; const f=m[2]; c.fix=c.fix||(typeof f==='function'?f(R):f); break;}} if(!c.sec) c.sec='plant';});}
+function secLabel(id){const s=SEC.find(s=>s.id===id); return s?(s.badge+' · '+s.n):id;}
+function goSec(id){const s=SEC.find(s=>s.id===id); if(!s||s.mode!=='design') return; STAGE=s.stage||STAGE; buildInputs(); refresh(); const el=document.querySelector('[data-sec="'+id+'"]'); if(el){el.open=true; if(el.scrollIntoView) el.scrollIntoView();}}
+/* Auto-select: shallowest coil of this cooling type that holds the humidity, plus the
+   frost coil if the weather needs one. Everything stays overridable afterwards. */
+function autoSelect(){
+  const order=S.coolSrc==='dx'?['dx3','dx4','dx5','dx6']:['chw6','chw8'];
+  let pick=order[order.length-1];
+  for(const k of order){S.CF=COILPRESETS[k].cf; if(!solve(S).latImposs){pick=k; break;}}
+  S.coilPreset=pick; S.CF=COILPRESETS[pick].cf;
+  if(S.owDB<=3&&S.frostProv==='none') S.frostProv='coil';
+  buildInputs(); refresh();
+}
+function resetSec(id){const s=SEC.find(s=>s.id===id); if(!s) return; s.f.forEach(f=>{if(f.k&&('v' in f)) S[f.k]=f.v;}); alignCoilPreset(); buildInputs(); refresh();}
 function buildResults(R){
   const C=checks(R);
+  decorateChecks(C,R);
   const worst=C.some(c=>c.lv==='bad')?'bad':C.some(c=>c.lv==='warn')?'warn':C.some(c=>c.lv==='na')?'na':'ok';
   const ic={ok:'✓',warn:'!',bad:'✕',na:'–'};
   const out=C.filter(c=>c.lv!=='ok');
+  out.forEach((c,i)=>c.find=i+1);
   const sysT=SYSTYPES[S.systemType]||SYSTYPES.mixed;
   const origin=S.projectKind==='example'?'Example values':(S.confirmedLocation==='yes'?'Confirmed project':'Unconfirmed assumptions');
   let h='';
@@ -1899,7 +1967,7 @@ function buildResults(R){
    <div class="lead3">
     <div><div class="k">What you need</div><div class="v">${fu(R.flow)} supply${S.owDB<=3?` \u00b7 frost ${n(R.frostDutyEff,1)} kW`:''} \u00b7 ${n(R.total,1)} kW cooling${R.heater>0.05?` \u00b7 ${n(R.heater,1)} kW heating`:''}${R.humKgh>0?` \u00b7 ${n(R.humKgh,1)} kg/h humidification`:''}${R.reheat>0?` \u00b7 ${n(R.reheat,1)} kW reheat`:''}</div></div>
     <div><div class="k">Are the conditions met</div><div class="v ${worst}">${ic[worst]} ${worst==='ok'?'Yes \u2014 holds':worst==='warn'?'Not yet \u2014 confirmation needed':worst==='na'?'Not assessed':'No \u2014 will not hold'}</div></div>
-    <div><div class="k">What needs attention</div><div class="v" style="font-size:13px;font-weight:500">${out.length?esc(out.slice(0,3).map(c=>c.t).join(' \u00b7 '))+(out.length>3?` \u00b7 +${out.length-3} more below`:''):'Nothing outstanding.'}</div></div>
+    <div><div class="k">What needs attention</div><div class="v" style="font-size:13px;font-weight:500">${out.length?out.map(c=>`<a class="findlink" href="#find-${c.find}"><b>${c.find}</b> · ${esc(c.t)} → ${esc(secLabel(c.sec))}</a>`).join(''):'Nothing outstanding.'}</div></div>
    </div>
    <div class="hint" style="padding-bottom:4px">Room ${esc(S.roomName||'\u2014')} \u00b7 target ${n(S.roomT,1)}\u00b0C${humidityModeOf(S)==='none'?' (no humidity requirement)':humidityModeOf(S)==='close'?` ${n(S.roomRH,0)}% \u00b1${n(S.humCloseTol,1)} close control`:` ${n(Math.max(2,S.roomRH-S.tolRH),0)}\u2013${n(Math.min(98,S.roomRH+S.tolRH),0)}% RH`} \u00b7 achieved ${n(R.roomAct.t,1)}\u00b0C / ${n(Math.min(R.roomAct.rh*100,100),0)}% \u00b7 occupancy ${esc(R.occScenario||'')} \u2014 ${esc(R.occLabel||'')}</div>
   </div></div>`;
@@ -1925,7 +1993,7 @@ function buildResults(R){
 
   h+=`<details class="card" open><summary><span class="step">C</span><h2>Does it hold the room</h2><span class="sub">${C.filter(c=>c.lv!=='ok').length} to look at</span></summary><div class="cbody">`;
   const stName={ok:'Meets the stated requirement',warn:'Requires confirmation',bad:'Does not meet the stated requirement',na:'Not assessed'};
-  C.forEach(c=>{h+=`<div class="chk"><div class="ic ${c.lv}">${ic[c.lv]}</div><div class="tx"><b>${c.t}</b><span class="pill ${c.lv}">${stName[c.lv]}</span><br><span class="mut">${c.x}</span></div></div>`;});
+  C.forEach(c=>{h+=`<div class="chk"${c.find?` id="find-${c.find}"`:''}><div class="ic ${c.lv}">${c.find||ic[c.lv]}</div><div class="tx"><b>${c.find?c.find+'. ':''}${c.t}</b><span class="pill ${c.lv}">${stName[c.lv]}</span><br><span class="mut">${c.x}</span>${c.fix?`<br><span class="fix">Do this: ${c.fix}</span>`:''}${c.find?`<br><button type="button" class="golink" onclick="goSec('${c.sec}')">Take me to ${esc(secLabel(c.sec))} →</button>`:''}</div></div>`;});
   h+=`</div></details>`;
 
   h+=`<details class="card" open><summary><span class="step">D</span><h2>The air path</h2></summary><div class="cbody">
@@ -2013,6 +2081,7 @@ function equipRows(R){
 
 let RES=null;
 function refresh(){ try{
+  alignCoilPreset();
   RES=solve(S);
   try{ const other=humidityModeOf(S)==='band'?'close':'band';
     RES.alt=solve(Object.assign({},S,{humidityMode:other,rhMode:other==='close'?'setpoint':'band'})); }catch(x){RES.alt=null;}
@@ -2123,12 +2192,14 @@ function pdfLayout(doc,footer){
     const lines=doc.splitTextToSize(pdfText(text),CW), h=lines.length*(size||9)*0.46+1; L.ensure(h); doc.text(lines,M,L.y+(size||9)*0.35); L.y+=h;};
   L.checks=list=>{list.forEach(c=>{
     doc.setFontSize(8.5); const tl=doc.splitTextToSize(pdfText(c.t),CW-9); doc.setFontSize(8); const xl=doc.splitTextToSize(pdfText(c.x),CW-9);
-    const h=tl.length*4.2+xl.length*3.7+2.4; L.ensure(h);
+    const fl=c.fix?doc.splitTextToSize(pdfText('Do this: '+c.fix),CW-9):[];
+    const h=tl.length*4.2+xl.length*3.7+fl.length*3.7+2.4; L.ensure(h);
     const col=c.lv==='ok'?PDFC.ok:c.lv==='warn'?PDFC.warn:PDFC.bad;
     doc.setFillColor(col); doc.circle(M+2.2,L.y+2.6,1.8,'F');
     doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor('#fff'); doc.text(c.lv==='ok'?'OK':c.lv==='warn'?'!':'X',M+2.2,L.y+3.4,{align:'center'});
     doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(PDFC.ink); doc.text(tl,M+7,L.y+3.6);
     doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(PDFC.muted); doc.text(xl,M+7,L.y+3.6+tl.length*4.2);
+    if(fl.length){doc.setTextColor(PDFC.ink); doc.text(fl,M+7,L.y+3.6+tl.length*4.2+xl.length*3.7);}
     L.y+=h; doc.setDrawColor(PDFC.faint); doc.setLineWidth(0.2); doc.line(M,L.y-0.6,PW-M,L.y-0.6);}); L.y+=2;};
   L.image=(png,wPx,hPx,widthMm)=>{const wm=widthMm||CW, hm=wm*hPx/wPx; L.ensure(hm+2); doc.addImage(png,'PNG',M+(CW-wm)/2,L.y,wm,hm); L.y+=hm+3;};
   L.chips=chips=>{const cwid=(CW-4*(chips.length-1))/chips.length, ch=20; L.ensure(ch+4);
@@ -2169,7 +2240,8 @@ async function buildPdfDoc(jsPDF){
 
   const inputs=inputSummary(MODE);
   if(MODE==='design'){
-    const R=RES, C=checks(R), worst=C.some(c=>c.lv==='bad')?'bad':C.some(c=>c.lv==='warn')?'warn':C.some(c=>c.lv==='na')?'na':'ok';
+    const R=RES, C=checks(R); decorateChecks(C,R);
+    const worst=C.some(c=>c.lv==='bad')?'bad':C.some(c=>c.lv==='warn')?'warn':C.some(c=>c.lv==='na')?'na':'ok';
     const sysTx=(SYSTYPES[S.systemType]||SYSTYPES.mixed).n;
     const wstTx={ok:'meets the stated requirement',warn:'requires confirmation',bad:'does not meet the stated requirement',na:'not assessed'}[worst];
     const outTx=C.filter(c=>c.lv!=='ok');
