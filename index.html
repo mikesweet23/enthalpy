@@ -436,6 +436,8 @@ COILPRESETS.custom.src='any';
 function coilOptOK(k){const p=COILPRESETS[k]; if(!p||p.src==='any') return true; return S.coolSrc==='dx'?p.src==='dx':p.src==='chw';}
 function coilDefault(){return S.coolSrc==='dx'?'dx4':'chw6';}
 function alignCoilPreset(){if(!coilOptOK(S.coilPreset)){S.coilPreset=coilDefault(); S.CF=COILPRESETS[S.coilPreset].cf;}}
+/* Frost coil catalogue step: 0.5 kW to 10 kW, 1 kW to 50 kW, 5 kW above. */
+function frostSize(kW){if(kW<=0) return 0; const step=kW<10?0.5:kW<50?1:5; return Math.ceil(kW/step-1e-9)*step;}
 /* Open-bath evaporation (ASHRAE Handbook \u2014 HVAC Applications, Ch.6 Eq.2, SI form):
    kg/h = 0.0457 \u00b7 area \u00b7 activity \u00b7 (Psat(water) \u2212 Pair), pressures in kPa.
    Approximate \u2014 still baths at the low end, agitated process tanks vary widely. */
@@ -666,10 +668,11 @@ function solve(S){
      recovery) to +5°C so nothing downstream can freeze. Sized, not selected. */
   const frostAir=st(5,FAw.W,P);
   const frostSuggest=Math.max(0,m_oa_w*(frostAir.h-FAw.h));
-  /* Base frost-coil design: the suggestion carried through until a rated duty
-     overrides it. Water flow off the LPHW temperatures, current if electric. */
+  /* Base frost-coil design: with no rated duty typed, the tool sizes the coil itself
+     (rounded up to the next catalogue step); a typed duty is checked against the
+     need instead. Water flow off the LPHW temperatures, current if electric. */
   const frostAuto=S.frostProv==='coil'&&!(S.frostDuty>0);
-  const frostDutyEff=S.frostProv==='coil'?(S.frostDuty>0?S.frostDuty:frostSuggest):0;
+  const frostDutyEff=S.frostProv==='coil'?(S.frostDuty>0?S.frostDuty:frostSize(frostSuggest)):0;
   const frostFlow=(S.frostSrc==='lphw')?frostDutyEff/(4.18*Math.max(1,S.lphwF-S.lphwR)):0;
   const heatElec = S.heatSrc==='elec' ? heater : 0;
   const hpAbs    = S.heatSrc==='hp' ? heater/Math.max(1,S.hpCOP) : 0;
@@ -692,8 +695,26 @@ function solve(S){
   if(toff_s>=Es.dp) W_off_s=Es.W;
   else{let tadp_s=Es.t-(Es.t-toff_s)/CF; tadp_s=Math.max(tadp_s,adpMin);
        W_off_s=Es.W-CF*(Es.W-Wsat(tadp_s,P));}
-  const W_room_s=W_off_s+latKgh/3600/mda_s;
-  const shRHroom=RHfromW(S.roomT,W_room_s,P)*100;
+  const W_room_tp=W_off_s+latKgh/3600/mda_s;
+  /* Humidity-priority control: with reheat available the coil runs deeper than the
+     sensible load asks, down to the off-coil moisture the room needs, and the reheat
+     lifts the supply back to ts_s. Bounded by the coil's own ADP limit. Without reheat
+     the coil can only follow temperature, so the room drifts wet on this morning. */
+  const W_off_need=Wdeh-latKgh/3600/mda_s-1e-5;
+  let W_off_h=W_off_s, reheatSh=0, shCtrl='temp';
+  if(!NOHUM && S.reheatSrc!=='none' && W_off_s>W_off_need){
+    const WadpNeed=Es.W-(Es.W-W_off_need)/CF;
+    let tadp_h=WadpNeed>1e-6?dewpoint(WadpNeed,P):adpMin;
+    tadp_h=Math.max(tadp_h,adpMin);
+    W_off_h=Math.min(W_off_s,Es.W-CF*(Es.W-Wsat(tadp_h,P)));
+    const toff_h=Es.t-CF*(Es.t-tadp_h);
+    reheatSh=Math.max(0,mda_s*(1.006+1.86*W_off_h)*(ts_s-(toff_h+fanRiseFor(mda_s,W_off_h))));
+    shCtrl='hum';
+  }
+  const W_room_s=W_off_h+latKgh/3600/mda_s;
+  const shRHroom=RHfromW(S.roomT,W_room_s,P)*100, shRHtp=RHfromW(S.roomT,W_room_tp,P)*100;
+  const reheatSel=Math.max(reheat,reheatSh);
+  const lphwFlowSel=(S.reheatSrc==='lphw')?reheatSel/(4.18*Math.max(1,S.lphwF-S.lphwR)):0;
 
   /* Room-units + separate ventilation: indicative single-zone split so the same
      load is never counted twice. Room units recirculate only and take the room
@@ -717,7 +738,7 @@ function solve(S){
     fanRise,dxAbs,reheatElec,heatElec,hpAbs,elecTotal,amps,shortfall,reheatFree,adpMinSrc:coolBase,
     exh_ls,FAs,hrRatio:FA.ratio,hrSaved,fanKW,netCool,W_hi,W_lo,Wdeh,leakOut,roomPa,leakA,occSensKW:occSens,act:{n:OCC.label},
     ts_w:ts_w_cap,dtHeat,heatShort,humKgh,humkW,heater,preheatAdb,lphwHeatFlow,qNet,frostSuggest,frostDutyEff,frostAuto,frostFlow,
-    shRHroom,W_room_s,leak_ls,press_ls,minach_ls,freshBase,vent,bathLatent,
+    shRHroom,shRHtp,shCtrl,reheatSh,reheatSel,lphwFlowSel,W_room_s,leak_ls,press_ls,minach_ls,freshBase,vent,bathLatent,
     occLabel:R.occLabel,occScenario:R.occScenario,humidityMode:R.humidityMode,systemType:R.systemType,
     ach:flow/1000*3600/V, achFresh:oa_ls/1000*3600/V, oaPct:oa_ls/flow*100, dtSupply:S.roomT-supply.t,
     sfpCheck:S.fanMode==='sfp'?S.sfp:null};
@@ -978,13 +999,13 @@ const SEC=[
  {k:'lphwR',l:'LPHW return',u:'°C',v:60,st:5,show:s=>s.heatSrc==='lphw'||s.reheatSrc==='lphw',why:'Shown because heating or reheat uses LPHW.'},
  {k:'humid',l:'Winter humidification',seg:[['steam','Steam'],['adiabatic','Adiabatic'],['none','None']],v:'steam'},
 ]},
-{id:'frost',mode:'design',badge:'07',stage:'system',n:'Frost protection',s:'sized below — nothing here is assumed',show:s=>s.owDB<=3,f:[
-{k:'frostProv',l:'Frost protection provided',seg:[['none','None — still required'],['coil','Frost coil on the fresh air'],['strategy','Other frost strategy (described below)']],v:'none',
-  h:'Outside air at or below 3\u00b0C can freeze the recovery or the cooling coil — the coil face runs colder than the air, so protection starts above 0\u00b0C. The tool sizes a preheat holding the winter fresh-air stream at +5\u00b0C and this entry records what is actually provided. A green result anywhere else never confirms it.'},
- {k:'frostSrc',l:'Frost coil energy — which is it',seg:[['lphw','Hot water'],['elec','Electric'],['dx','DX']],v:'lphw',show:s=>s.frostProv==='coil',why:'Shown because Frost protection is “Frost coil”.',
-  h:'Hot water is the usual AHU answer off the LPHW circuit; electric is simple for small duties but runs at full price; DX preheat is unusual — confirm it with the manufacturer before relying on it.'},
-{k:'frostDuty',l:'Frost coil duty — suggested, override if needed',u:'kW',v:0,st:0.5,show:s=>s.frostProv==='coil',why:'Shown because Frost protection is “Frost coil”.',
-  h:()=>{const sug=(typeof RES!=='undefined'&&RES&&RES.frostSuggest)||0;return 'Suggested right now: <b>'+n(sug,1)+' kW</b> to hold the winter fresh air at +5\u00b0C. Leave at 0 and the suggestion is carried through flagged unconfirmed — or type the selected coil\u2019s rated duty to check it.';}},
+{id:'frost',mode:'design',badge:'07',stage:'system',n:'Frost protection',s:'sized by the tool — override with a rated duty if you have one',show:s=>s.owDB<=3,f:[
+{k:'frostProv',l:'Frost protection provided',seg:[['coil','Frost coil on the fresh air'],['strategy','Other frost strategy (described below)'],['none','None — leave the requirement open']],v:'coil',
+  h:'Outside air at or below 3\u00b0C can freeze the recovery or the cooling coil — the coil face runs colder than the air, so protection starts above 0\u00b0C. The tool sizes a preheat holding the winter fresh-air stream at +5\u00b0C and selects the coil for you; a green result anywhere else never stands in for it.'},
+ {k:'frostSrc',l:'Frost coil energy',seg:[['lphw','Hot water'],['elec','Electric']],v:'lphw',show:s=>s.frostProv==='coil',why:'Shown because Frost protection is “Frost coil”.',
+  h:'Hot water is the usual AHU answer off the LPHW circuit; electric is simple for small duties but runs at full price.'},
+{k:'frostDuty',l:'Frost coil rated duty — 0 lets the tool size it',u:'kW',v:0,st:0.5,show:s=>s.frostProv==='coil',why:'Shown because Frost protection is “Frost coil”.',
+  h:()=>{const R0=(typeof RES!=='undefined'&&RES)||null;const sug=R0?R0.frostSuggest:0;return 'Needed: <b>'+n(sug,1)+' kW</b> to hold the winter fresh air at +5\u00b0C; the tool selects <b>'+n(frostSize(sug),1)+' kW</b> (next catalogue step). Type a manufacturer\u2019s rated duty here to check a specific coil instead.';}},
  {k:'frostNote',l:'Frost strategy description',txt:1,v:'',show:s=>s.frostProv==='strategy',why:'Shown because Frost protection is “Other frost strategy”.',
   h:'Describe the strategy plainly, e.g. “glycol run-around with face-and-bypass frost control, proven to -6\u00b0C”.'},
 ]},
@@ -1056,10 +1077,11 @@ function migrateState(d){
   if(d.bathArea===undefined) d.bathArea=0;
   if(d.bathTemp===undefined) d.bathTemp=30;
   if(d.bathUse===undefined) d.bathUse='still';
-  if(d.frostProv===undefined) d.frostProv=(d.confirmedFrost==='yes')?'strategy':'none';
+  if(d.frostProv===undefined) d.frostProv=(d.confirmedFrost==='yes')?'strategy':'coil';
   if(d.frostDuty===undefined) d.frostDuty=0;
-  if(d.frostSrc===undefined) d.frostSrc='lphw';
+  if(d.frostSrc===undefined||d.frostSrc==='dx') d.frostSrc='lphw';
   if(d.frostNote===undefined) d.frostNote=(d.confirmedFrost==='yes')?'Carried over: frost protection was recorded as provided. Describe the strategy here.':'';
+  if(d.autoSelDone===undefined) d.autoSelDone=true;   // existing saves keep their own selection
   if(d.coilPreset===undefined){
     let best='custom',bd=99;
     for(const k in COILPRESETS){const dd=Math.abs((d.CF||0.9)-COILPRESETS[k].cf); if(dd<bd&&k!=='custom'){bd=dd;best=k;}}
@@ -1098,7 +1120,7 @@ function setMode(m){MODE=m;
   if(m==='design'&&!STAGE) STAGE='room';
   document.querySelectorAll('#modesw button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.m===m)));
   buildInputs(); refresh(); window.scrollTo({top:0,behavior:'smooth'});}
-function setStage(s){STAGE=s; buildInputs(); window.scrollTo({top:0,behavior:'smooth'});}
+function setStage(s){STAGE=s; if(s==='system'&&MODE==='design'&&!S.autoSelDone){autoSelect(); window.scrollTo({top:0,behavior:'smooth'}); return;} buildInputs(); window.scrollTo({top:0,behavior:'smooth'});}
 /* Manufacturer's selection check: requirements from the design side, rated
    airflow fixed, capacities entered — airflow cover and capacity cover judged
    separately. Measured performance stays on the site side. */
@@ -1171,7 +1193,7 @@ function buildInputs(){
       const op=(sec.id in wasOpen)?wasOpen[sec.id]:true;
       h+=`<details class="card" data-sec="${sec.id}" ${op?'open':''}><summary><span class="step">${sec.badge}</span><h2>${sec.n}</h2><span class="sub">${sec.s}</span></summary><div class="cbody">`;
       if(sec.id==='loads'&&S.occMode==='groups') h+=occGroupsHTML();
-      if(sec.id==='plant') h+=`<div class="assump"><b>Working assumptions:</b> ${esc(advSummary())}</div>`;
+      if(sec.id==='plant') h+=`<div class="assump"><b>Selected for you from the room and loads</b> — coil, reheat and frost coil were chosen so the design day, the mild damp morning and winter design all hold. Change anything below to override; Reset returns the defaults. <b>Working assumptions:</b> ${esc(advSummary())}</div>`;
       const vis=sec.f.filter(f=>!(f.show&&!f.show(S)));
       let alt=0;
       vis.forEach(f=>{
@@ -1179,7 +1201,7 @@ function buildInputs(){
         const dep=f.show?` dep`:'', why=f.show&&f.why?`<div class="why">↳ ${f.why}</div>`:'';
         h+=`<div class="fw${alt%2?' alt':''}${dep}" data-k="${f.k}">`+why+fieldHTML(f)+(f.h?`<div class="hint" id="h-${f.k}">${hintText(f)}</div>`:'')+`</div>`; alt++;
       });
-      h+=`<div class="tools"><button type="button" onclick="resetSec('${sec.id}')">Reset this section</button>${sec.id==='plant'?`<button type="button" class="primary" title="Picks the shallowest coil of this cooling type that holds the humidity, and adds the frost coil if the weather needs one. Everything stays overridable." onclick="autoSelect()">Auto-select from the loads</button>`:''}</div></div></details>`;
+      h+=`<div class="tools"><button type="button" onclick="resetSec('${sec.id}')">Reset this section</button>${sec.id==='plant'?`<button type="button" class="primary" title="Re-runs the year-round selection: reheat for humidity-priority control, the shallowest coil of this cooling type that holds the design day, the mild damp morning and winter, and the frost coil when the weather calls for it. Everything stays overridable." onclick="autoSelect()">Re-run year-round selection</button>`:''}</div></div></details>`;
     });
     const idx=STAGES.findIndex(s=>s[0]===STAGE);
     h+=`<div class="stepnav">`+
@@ -1725,7 +1747,7 @@ function SRC(){return S.coolSrc==='dx'
 function checks(R){
   const C=[];
   const push=(lv,t,x)=>C.push({lv,t,x});
-  const frostSrcTxt=()=>S.frostSrc==='lphw'?'on hot water ('+wu(R.frostFlow)+' at '+n(S.lphwF,0)+'/'+n(S.lphwR,0)+'°C)':S.frostSrc==='elec'?'electric (about '+n(R.amps(R.frostDutyEff),0)+' A at 400 V)':'DX — confirm the selection with the manufacturer';
+  const frostSrcTxt=()=>S.frostSrc==='lphw'?'on hot water ('+wu(R.frostFlow)+' at '+n(S.lphwF,0)+'/'+n(S.lphwR,0)+'°C)':'electric (about '+n(R.amps(R.frostDutyEff),0)+' A at 400 V)';
   /* Traceability first: example inputs and unconfirmed weather cap the whole
      assessment, however good the numbers look. */
   if(S.projectKind==='example') push('warn','Example project — inputs are not confirmed',
@@ -1826,8 +1848,16 @@ function checks(R){
    `At ${n(S.shDB,0)}°C / ${n(S.shRH,0)}% outside with ${n(S.shLoad,0)}% of the sensible load, the room settles at about ${n(Math.min(R.shRHroom,100),0)}% RH. No humidity requirement is set, so this is reported only.`);
   else{
   const shOK=Math.abs(R.shRHroom-S.roomRH)<=rhTol;
-  push(R.shRHroom>100?'bad':shOK?'ok':'warn','Off-design check — mild and damp',
-   `At ${n(S.shDB,0)}°C / ${n(S.shRH,0)}% outside with ${n(S.shLoad,0)}% of the sensible load, the room settles at ${n(Math.min(R.shRHroom,100),0)}% RH. ${shOK?'Holds.':'Outside tolerance — you need humidity-priority control with reheat, or the room drifts wet on mild mornings.'}`);
+  const shWhere=`At ${n(S.shDB,0)}°C / ${n(S.shRH,0)}% outside with ${n(S.shLoad,0)}% of the sensible load`;
+  if(R.shRHroom>100) push('bad','Off-design check — mild and damp',
+   `${shWhere}, the room would run saturated even with the coil driven to its limit. Deepen the coil or lower the water / evaporating temperature.`);
+  else if(shOK&&R.shCtrl==='hum') push('ok','Off-design check — mild and damp holds on humidity-priority control',
+   `${shWhere}, the room holds at ${n(R.shRHroom,0)}% RH. Temperature-only control would let it drift to ${n(Math.min(R.shRHtp,100),0)}% RH, so the controls run the coil for humidity and the ${S.reheatSrc==='hotgas'?'hot gas':S.reheatSrc==='recover'?'run-around':S.reheatSrc} reheat lifts the supply back — ${n(R.reheatSh,1)} kW of reheat on this morning${R.reheatSh>R.reheat+0.05?', which sizes the reheat battery':''}. Specify a humidity sensor in the room or return with reheat enable.`);
+  else if(shOK) push('ok','Off-design check — mild and damp',`${shWhere}, the room settles at ${n(R.shRHroom,0)}% RH. Holds on temperature control alone.`);
+  else if(S.reheatSrc==='none') push('warn','Off-design check — mild and damp needs reheat',
+   `${shWhere}, the room drifts to ${n(R.shRHroom,0)}% RH: there is not enough sensible load to make the coil run. With no reheat the coil cannot be driven for humidity without overcooling the room. Select a reheat source under 06 and the tool re-runs this point on humidity-priority control.`);
+  else push('bad','Off-design check — mild and damp',
+   `${shWhere}, even with the coil driven for humidity and ${n(R.reheatSh,1)} kW of reheat, the room only reaches ${n(R.shRHroom,0)}% RH — the coil’s apparatus dew point is the limit. Deepen the coil or lower the water / evaporating temperature.`);
   }
 
   if(R.heatShort>0) push('warn','Air alone will not heat the space',
@@ -1845,8 +1875,8 @@ function checks(R){
   }
   if(S.reheatSrc==='hotgas'&&R.reheat>0) push('ok','Hot gas reheat is free to run',
     `${n(R.reheat,1)} kW of condenser heat back into the air. It costs nothing to run, but unlike a run-around it does not reduce the ${n(R.total,1)} kW cooling duty — the condenser still rejects the rest.`);
-  if(S.reheatSrc==='elec'&&R.reheat>0) push('warn','Electric reheat',
-    `${n(R.reheat,1)} kW on resistance heat, about ${n(R.amps(R.reheat),0)} A at 400 V. Bought at full price and running at the same time as the cooling.`);
+  if(S.reheatSrc==='elec'&&R.reheatSel>0) push('warn','Electric reheat',
+    `${n(R.reheatSel,1)} kW on resistance heat, about ${n(R.amps(R.reheatSel),0)} A at 400 V${R.reheatSh>R.reheat+0.05?' — sized by the mild damp morning, not the design day':''}. Bought at full price and running at the same time as the cooling.`);
   if(S.heatSrc==='elec'&&R.heater>0) push('warn','Electric heater battery',
     `${n(R.heater,1)} kW, about ${n(R.amps(R.heater),0)} A at 400 V three phase. Check the incomer will take it before you promise it.`);
   if(S.heatSrc==='hp'&&R.heater>0) push('warn','Heat pump heating at winter design',
@@ -1855,18 +1885,16 @@ function checks(R){
     `${n(R.elecTotal,1)} kW, about ${n(R.amps(R.elecTotal),0)} A at 400 V three phase, fans excluded.`);
   if(S.owDB<=3){
     const sug=R.frostSuggest;
-    if(S.frostProv==='coil'&&R.frostAuto) push('warn','Frost coil duty is suggested, not confirmed',
-      'Suggested '+n(sug,1)+' kW '+frostSrcTxt()+' to hold '+fu(R.oa_ls)+' of fresh air at +5°C in winter design. This is carried through as a working figure only \u2014 confirm the selection or type the rated duty under Frost protection.');
-    else if(S.frostProv==='coil'&&S.frostDuty+1e-6>=sug) push('ok','Frost coil covers the suggested preheat',
-      `${n(S.frostDuty,1)} kW rated against ${n(sug,1)} kW to hold ${fu(R.oa_ls)} of fresh air at +5\u00b0C in winter design${S.frostSrc==='lphw'?`, drawing ${wu(R.frostFlow)} at ${n(S.lphwF,0)}/${n(S.lphwR,0)}\u00b0C`:S.frostSrc==='elec'?`, about ${n(R.amps(R.frostDutyEff),0)} A at 400 V`:''}. Confirm controls, frost-stat and drain-down with the supplier — the weather that sizes it is the weather you confirmed above.`);
-    else if(S.frostProv==='coil'&&S.frostDuty>0) push('bad','Frost coil is short of the suggested preheat',
+    if(S.frostProv==='coil'&&R.frostAuto) push('ok','Frost coil selected by the tool',
+      n(R.frostDutyEff,1)+' kW '+frostSrcTxt()+' — the next catalogue step above the '+n(sug,1)+' kW needed to hold '+fu(R.oa_ls)+' of fresh air at +5°C from '+n(S.owDB,1)+'°C outside. Fitted ahead of the recovery so everything downstream is protected; frost-stat holds it off above +5°C. Type a manufacturer’s rated duty under 07 to check a specific coil instead.');
+    else if(S.frostProv==='coil'&&S.frostDuty+1e-6>=sug) push('ok','Frost coil covers the winter preheat',
+      `${n(S.frostDuty,1)} kW rated against ${n(sug,1)} kW to hold ${fu(R.oa_ls)} of fresh air at +5\u00b0C in winter design${S.frostSrc==='lphw'?`, drawing ${wu(R.frostFlow)} at ${n(S.lphwF,0)}/${n(S.lphwR,0)}\u00b0C`:`, about ${n(R.amps(R.frostDutyEff),0)} A at 400 V`}. Confirm controls, frost-stat and drain-down with the supplier — the weather that sizes it is the weather you confirmed above.`);
+    else if(S.frostProv==='coil') push('bad','Frost coil is short of the winter preheat',
       `${n(S.frostDuty,1)} kW rated against ${n(sug,1)} kW to hold ${fu(R.oa_ls)} of fresh air at +5\u00b0C. Upsize it or the recovery and cooling coil behind it will freeze.`);
-    else if(S.frostProv==='coil') push('warn','Frost coil selected but no duty entered',
-      `About ${n(sug,1)} kW is needed to hold ${fu(R.oa_ls)} of fresh air at +5\u00b0C in winter design. Enter the rated duty under Frost protection.`);
     else if(S.frostProv==='strategy'&&(S.frostNote||'').trim()) push('ok','Frost strategy recorded as provided',
       `“${(S.frostNote||'').trim().slice(0,140)}” — taken as provided for ${n(sug,1)} kW of winter preheat duty. Nothing else going green confirms it; only this entry does.`);
     else push('warn','Frost protection is still required — here is what is needed',
-      `Heat ${fu(R.oa_ls)} of fresh air from ${n(S.owDB,1)}\u00b0C to +5\u00b0C before it can meet the recovery or the cooling coil: about ${n(sug,1)} kW at winter design. Choose a frost coil or describe the strategy under Frost protection — until then this stays an outstanding requirement, not a pass.`);
+      `Heat ${fu(R.oa_ls)} of fresh air from ${n(S.owDB,1)}\u00b0C to +5\u00b0C before it can meet the recovery or the cooling coil: about ${n(sug,1)} kW at winter design. Choose a frost coil (the tool sizes it) or describe the strategy under 07 Frost protection — until then this stays an outstanding requirement, not a pass.`);
   }
   push('ok','Air change rates',`${n(R.ach,1)} ac/h of supply air on the ${n(R.V,0)} m³ room (${fu(R.flow)}), of which ${n(R.achFresh,2)} ac/h is fresh air (${fu(R.oa_ls)}). ${S.minACH>0?'The minimum imposed is '+n(S.minACH,1)+' ac/h.':''}`);
   return C;
@@ -1923,27 +1951,41 @@ const FIXMAP=[
  ['More air leaves than enters','extract','Spill less exhaust at the unit or add a make-up air path — fresh minus exhaust minus extract must close.'],
  ['Coil choice does not match','plant','Switch Coil choice to this cooling type above, or Custom with the selected contact factor.'],
  ['Heat recovery has nothing','extract','Spill exhaust at the unit for the recovery to work against, or set recovery back to None.'],
- ['Off-design check','plant','Make the coil dry without overcooling: deepen the coil, lower the water temperature, or add reheat — then re-check this mild damp point.'],
+ ['Off-design check — mild and damp needs reheat','plant','Select a reheat source under 06 (LPHW, run-around or hot gas) so the coil can run humidity-priority — Auto-select does this for you.'],
+ ['Off-design check','plant','Deepen the coil (more rows) or lower the water / evaporating temperature so the ADP reaches the moisture the room needs on this morning — Auto-select tries each coil in turn.'],
  ['Air alone will not heat','plant',R=>`Cover the ${n(R.heatShort,1)} kW shortfall with heater battery, or accept a cooler winter room.`],
  ['No humidifier selected','plant',R=>`Select humidification for ${n(R.humKgh,1)} kg/h, or drop the winter humidity target.`],
  ['Evaporating temperature will frost','plant','Add hot-gas or reverse-cycle defrost, or keep evaporating at 1C or above.'],
- ['Electric reheat','plant',R=>`Move reheat to LPHW, run-around or hot gas — or confirm the incomer takes about ${n(R.amps(R.reheat),0)} A extra.`],
- ['Frost coil is short','frost',R=>`Raise the rated duty to at least ${n(R.frostSuggest,1)} kW (next coil size up), or the recovery and cooling coil behind it will freeze.`],
- ['Frost coil duty is suggested','frost','Type the selected coil rated duty under 07 Frost protection to confirm it — until then this stays a working figure.'],
- ['Frost coil selected but no duty','frost',R=>`Enter the rated duty — about ${n(R.frostSuggest,1)} kW holds the winter fresh air at +5C.`],
- ['Frost protection is still required','frost',R=>`Add a frost coil under 07 Frost protection (about ${n(R.frostSuggest,1)} kW) or describe the strategy — nothing here passes without it.`]
+ ['Electric reheat','plant',R=>`Move reheat to LPHW, run-around or hot gas — or confirm the incomer takes about ${n(R.amps(R.reheatSel),0)} A extra.`],
+ ['Frost coil is short','frost',R=>`Raise the rated duty to at least ${n(R.frostSuggest,1)} kW (the tool selects ${n(frostSize(R.frostSuggest),1)} kW) — or set the duty back to 0 and let the tool size it.`],
+ ['Frost protection is still required','frost',R=>`Set Frost protection to “Frost coil” under 07 — the tool sizes it at ${n(frostSize(R.frostSuggest),1)} kW — or describe the strategy provided.`]
 ];
 function decorateChecks(C,R){C.forEach(c=>{for(const m of FIXMAP){if(c.t.indexOf(m[0])===0){c.sec=c.sec||m[1]; const f=m[2]; c.fix=c.fix||(typeof f==='function'?f(R):f); break;}} if(!c.sec) c.sec='plant';});}
 function secLabel(id){const s=SEC.find(s=>s.id===id); return s?(s.badge+' · '+s.n):id;}
 function goSec(id){const s=SEC.find(s=>s.id===id); if(!s||s.mode!=='design') return; STAGE=s.stage||STAGE; buildInputs(); refresh(); const el=document.querySelector('[data-sec="'+id+'"]'); if(el){el.open=true; if(el.scrollIntoView) el.scrollIntoView();}}
-/* Auto-select: shallowest coil of this cooling type that holds the humidity, plus the
-   frost coil if the weather needs one. Everything stays overridable afterwards. */
+/* Year-round selection. Design day, the mild damp morning and winter design all have
+   to hold before a coil is accepted: reheat is put in so the coil can run humidity-
+   priority, the shallowest coil of this cooling type that holds every point is taken,
+   and the frost coil is added and sized when the weather calls for it. Runs once when
+   the System stage is first reached; the button re-runs it; every value stays editable. */
+function holdsAllPoints(R){
+  if(R.latImposs||!R.adpOK) return false;
+  const HM=humidityModeOf(S); if(HM==='none') return true;
+  const rhTol=HM==='close'?Math.max(0.5,S.humCloseTol):S.tolRH;
+  if(R.roomAct.rh>1) return false;
+  return Math.abs(R.roomAct.t-S.roomT)<=S.tolT&&Math.abs(R.roomAct.rh*100-S.roomRH)<=rhTol&&Math.abs(R.shRHroom-S.roomRH)<=rhTol;
+}
 function autoSelect(){
+  if(S.reheatSrc==='none') S.reheatSrc=S.heatSrc==='lphw'?'lphw':(S.coolSrc==='dx'?'hotgas':'elec');
   const order=S.coolSrc==='dx'?['dx3','dx4','dx5','dx6']:['chw6','chw8'];
-  let pick=order[order.length-1];
-  for(const k of order){S.CF=COILPRESETS[k].cf; if(!solve(S).latImposs){pick=k; break;}}
-  S.coilPreset=pick; S.CF=COILPRESETS[pick].cf;
-  if(S.owDB<=3&&S.frostProv==='none') S.frostProv='coil';
+  let pick=null;
+  for(const k of order){S.coilPreset=k; S.CF=COILPRESETS[k].cf; if(holdsAllPoints(solve(S))){pick=k; break;}}
+  if(!pick){pick=order[order.length-1]; S.coilPreset=pick; S.CF=COILPRESETS[pick].cf;}
+  if(S.owDB<=3){
+    if(S.frostProv==='none') S.frostProv='coil';
+    if(S.frostProv==='coil'){S.frostSrc=S.heatSrc==='lphw'?'lphw':'elec'; S.frostDuty=0;}
+  }
+  S.autoSelDone=true;
   buildInputs(); refresh();
 }
 function resetSec(id){const s=SEC.find(s=>s.id===id); if(!s) return; s.f.forEach(f=>{if(f.k&&('v' in f)) S[f.k]=f.v;}); alignCoilPreset(); buildInputs(); refresh();}
@@ -2065,7 +2107,7 @@ function equipRows(R){
   rows.push(['Cooling duty — net into the space',`${n(R.netCool,1)} kW`,'']);
   rows.push(['Supply fan and motor heat',`${n(R.fanKW,1)} kW`,`${n(R.fanRise,2)} K rise`]);
   rows.push(['Fresh-air share of the cooling duty',`${n(R.oaLoad,1)} kW`,'']);
-  rows.push(['Reheat battery ('+(S.reheatSrc==='hotgas'?'hot gas':S.reheatSrc==='recover'?'run-around':S.reheatSrc)+')',`${n(R.reheat,1)} kW`,S.reheatSrc==='lphw'?wu(R.lphwFlow)+' LPHW':S.reheatSrc==='elec'?n(R.amps(R.reheat),0)+' A':R.reheatFree?'free':'']);
+  rows.push(['Reheat battery ('+(S.reheatSrc==='hotgas'?'hot gas':S.reheatSrc==='recover'?'run-around':S.reheatSrc)+')',`${n(R.reheatSel,1)} kW`,(R.reheatSh>R.reheat+0.05?'sized by the mild damp morning · ':'')+(S.reheatSrc==='lphw'?wu(R.lphwFlowSel)+' LPHW':S.reheatSrc==='elec'?n(R.amps(R.reheatSel),0)+' A':R.reheatFree?'free':'')]);
   rows.push(['Winter heater battery ('+(S.heatSrc==='hp'?'heat pump':S.heatSrc)+')',`${n(R.heater,1)} kW`,S.heatSrc==='lphw'?wu(R.lphwHeatFlow)+' LPHW':S.heatSrc==='elec'?n(R.amps(R.heater),0)+' A':n(R.hpAbs,1)+' kW absorbed']);
   rows.push(['Total electrical load (fans excluded)',`${n(R.elecTotal,1)} kW`,`${n(R.amps(R.elecTotal),0)} A at 400 V`]);
   rows.push(['Winter supply temperature',`${n(R.ts_w,1)} °C`,'']);
@@ -2073,8 +2115,8 @@ function equipRows(R){
   rows.push(['Room loads carried',`${n(R.qs,1)} kW sensible`,`${n(R.latKgh,1)} kg/h moisture${R.bathLatent>0.005?` (incl. ${n(R.bathLatent,1)} kg/h open bath)`:''}`]);
   if(S.owDB<=3){
     rows.push(['Frost preheat suggested',`${n(R.frostSuggest,1)} kW`,`heats ${fu(R.oa_ls)} fresh air from ${n(S.owDB,1)}\u00b0C to +5\u00b0C`]);
-    rows.push(['Frost coil base design',`${n(R.frostDutyEff,1)} kW ${S.frostSrc==='lphw'?'hot water':S.frostSrc==='elec'?'electric':'DX'}`,
-      S.frostProv!=='coil'?'no coil selected':R.frostAuto?'suggested figure — confirm or override':S.frostSrc==='lphw'?wu(R.frostFlow)+` at ${n(S.lphwF,0)}/${n(S.lphwR,0)}\u00b0C`:S.frostSrc==='elec'?n(R.amps(R.frostDutyEff),0)+' A at 400 V':'confirm selection with manufacturer']);
+    rows.push(['Frost coil'+(R.frostAuto?' — selected by the tool':' — rated'),`${n(R.frostDutyEff,1)} kW ${S.frostSrc==='lphw'?'hot water':'electric'}`,
+      S.frostProv!=='coil'?'no coil selected':(S.frostSrc==='lphw'?wu(R.frostFlow)+` at ${n(S.lphwF,0)}/${n(S.lphwR,0)}\u00b0C`:n(R.amps(R.frostDutyEff),0)+' A at 400 V')+' \u00b7 ahead of the recovery, frost-stat off above +5\u00b0C']);
   }
   return rows;
 }
