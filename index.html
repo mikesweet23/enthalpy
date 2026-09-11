@@ -436,8 +436,9 @@ COILPRESETS.custom.src='any';
 function coilOptOK(k){const p=COILPRESETS[k]; if(!p||p.src==='any') return true; return S.coolSrc==='dx'?p.src==='dx':p.src==='chw';}
 function coilDefault(){return S.coolSrc==='dx'?'dx4':'chw6';}
 function alignCoilPreset(){if(!coilOptOK(S.coilPreset)){S.coilPreset=coilDefault(); S.CF=COILPRESETS[S.coilPreset].cf;}}
-/* Frost coil catalogue step: 0.5 kW to 10 kW, 1 kW to 50 kW, 5 kW above. */
-function frostSize(kW){if(kW<=0) return 0; const step=kW<10?0.5:kW<50?1:5; return Math.ceil(kW/step-1e-9)*step;}
+/* Heater-battery catalogue step: 0.5 kW to 10 kW, 1 kW to 50 kW, 5 kW above. */
+function catStep(kW){if(kW<=0) return 0; const step=kW<10?0.5:kW<50?1:5; return Math.ceil(kW/step-1e-9)*step;}
+const frostSize=catStep;
 /* Open-bath evaporation (ASHRAE Handbook \u2014 HVAC Applications, Ch.6 Eq.2, SI form):
    kg/h = 0.0457 \u00b7 area \u00b7 activity \u00b7 (Psat(water) \u2212 Pair), pressures in kPa.
    Approximate \u2014 still baths at the low end, agitated process tanks vary widely. */
@@ -488,8 +489,9 @@ function solve(S){
   const OCC=occOf(S), HM=humidityModeOf(S), FAO=S.systemType==='fao', NOHUM=HM==='none';
   const occSens=OCC.sens, occLat=OCC.lat;
   R.occLabel=OCC.label; R.occScenario=OCC.scen; R.humidityMode=HM; R.systemType=S.systemType||'mixed';
-  let qs = (S.sensMode==='total') ? S.qsTotal+(S.peopleInTotal==='no'?occSens:0)
-        : occSens + S.lighting*S.roomArea/1000 + S.equip + S.solar + S.otherSens;
+  const fabricGain=Math.max(0,S.fabricGain||0);
+  let qs = ((S.sensMode==='total') ? S.qsTotal+(S.peopleInTotal==='no'?occSens:0)
+        : occSens + S.lighting*S.roomArea/1000 + S.equip + S.solar + S.otherSens) + fabricGain;
   qs=Math.max(0.001,qs);
   const bathLatent=bathEvap(S);
   R.bathLatent=bathLatent;
@@ -714,7 +716,9 @@ function solve(S){
   const W_room_s=W_off_h+latKgh/3600/mda_s;
   const shRHroom=RHfromW(S.roomT,W_room_s,P)*100, shRHtp=RHfromW(S.roomT,W_room_tp,P)*100;
   const reheatSel=Math.max(reheat,reheatSh);
-  const lphwFlowSel=(S.reheatSrc==='lphw')?reheatSel/(4.18*Math.max(1,S.lphwF-S.lphwR)):0;
+  const reheatAuto=S.reheatSrc!=='none'&&!(S.reheatDuty>0);
+  const reheatEff=S.reheatSrc==='none'?0:(S.reheatDuty>0?S.reheatDuty:catStep(reheatSel));
+  const lphwFlowSel=(S.reheatSrc==='lphw')?reheatEff/(4.18*Math.max(1,S.lphwF-S.lphwR)):0;
 
   /* Room-units + separate ventilation: indicative single-zone split so the same
      load is never counted twice. Room units recirculate only and take the room
@@ -732,13 +736,13 @@ function solve(S){
   }
 
   return {V,G,qs,ql,latKgh,WoffMin:R.WoffMin,occSens,occLat,room,OA,OW,SH,E,Es,Ew,off,supply,supplyReq,roomAct,
-    flow,mda,oa_ls,cand,driver,latImposs,fanRise,wet,mode,govern,t_ADP,W_ADP,adpOK,adpMin,adpReq_T,adpReq_M,
+    flow,mda,oa_ls,qsRoom:qs,fabricGain,cand,driver,latImposs,fanRise,wet,mode,govern,t_ADP,W_ADP,adpOK,adpMin,adpReq_T,adpReq_M,
     total,sens,lat,cond:cond*3600,condKgs:cond,frosting,frostKgs,drainKgs,frostKW,frostAcc,fogKgh:fogKgs*3600,
     reheat,oaLoad,chwFlow,lphwFlow,faceArea,rows,CF,
     fanRise,dxAbs,reheatElec,heatElec,hpAbs,elecTotal,amps,shortfall,reheatFree,adpMinSrc:coolBase,
     exh_ls,FAs,hrRatio:FA.ratio,hrSaved,fanKW,netCool,W_hi,W_lo,Wdeh,leakOut,roomPa,leakA,occSensKW:occSens,act:{n:OCC.label},
     ts_w:ts_w_cap,dtHeat,heatShort,humKgh,humkW,heater,preheatAdb,lphwHeatFlow,qNet,frostSuggest,frostDutyEff,frostAuto,frostFlow,
-    shRHroom,shRHtp,shCtrl,reheatSh,reheatSel,lphwFlowSel,W_room_s,leak_ls,press_ls,minach_ls,freshBase,vent,bathLatent,
+    shRHroom,shRHtp,shCtrl,reheatSh,reheatSel,reheatEff,reheatAuto,lphwFlowSel,W_room_s,leak_ls,press_ls,minach_ls,freshBase,vent,bathLatent,
     occLabel:R.occLabel,occScenario:R.occScenario,humidityMode:R.humidityMode,systemType:R.systemType,
     ach:flow/1000*3600/V, achFresh:oa_ls/1000*3600/V, oaPct:oa_ls/flow*100, dtSupply:S.roomT-supply.t,
     sfpCheck:S.fanMode==='sfp'?S.sfp:null};
@@ -888,6 +892,11 @@ const SEC=[
  {k:'tolRH',l:'Humidity band half-width',u:'±%',v:10,st:1,show:s=>humidityModeOf(s)==='band',why:'Shown because Humidity requirement is “Permitted range”.'},
  {k:'humCloseTol',l:'Close-control tolerance',u:'±% RH',v:3,st:0.5,show:s=>humidityModeOf(s)==='close',why:'Shown because Humidity requirement is “Close control”.',
   h:'The result passes only inside this band around the target. Controls, sensor drift and part-load swings all eat into it in practice.'},
+ {grp:'The fabric',sub:'what the shell does to the room in summer and in winter — fresh air is worked out by the tool'},
+ {k:'fabricGain',l:'Summer heat gain through the fabric',u:'kW',v:0,st:0.5,
+  h:'Conduction through walls, roof and glazing at the summer design condition (U × A × ΔT) — added to the room sensible gain in Loads whichever way that is entered. Solar through glazing is entered separately under Loads. Leave at 0 if the sensible total you enter in Loads already includes fabric.'},
+ {k:'winterLoss',l:'Winter fabric heat loss',u:'kW',v:25,st:1,h:'Fabric and infiltration only. The fresh-air load is calculated by the tool, so leave it out here.'},
+ {k:'winterGains',l:'Internal gain you will credit in winter',u:'kW',v:0,st:1},
  {k:'humidityMode',l:'Humidity requirement',seg:[['none','No requirement'],['band','Permitted range'],['close','Close control']],v:'band',
   h:'No requirement still calculates moisture, condensation and coil loads — it only stops passing or failing humidity. Close control aims at the target itself inside its own tolerance; an exact real-world setpoint is never promised.'},
  {k:'roomArea',l:'Floor area',u:'m²',v:400,st:10},
@@ -908,10 +917,10 @@ const SEC=[
  {k:'peopleInTotal',l:'That total',seg:[['yes','Includes people'],['no','Add people on top']],v:'yes',show:s=>s.sensMode==='total',why:'Shown because Sensible heat is “I have a total”.',
   h:'Say explicitly whether the people above are inside the total. “Add people on top” adds their sensible heat once — never twice.'},
  {k:'qsTotal',l:'Total room sensible gain',u:'kW',v:40,st:1,show:s=>s.sensMode==='total',why:'Shown because Sensible heat is “I have a total”.',
-  h:'Everything that heats the air: people, lighting, machines, fabric and solar. Whether people are inside depends on the line above — never count them twice.'},
+  h:s=>'Lighting, machines and solar — whether people are inside depends on the line above, never count them twice. The summer fabric gain from Stage 1 ('+n(s.fabricGain||0,1)+' kW) is added on top, so leave it out of this total or set it to 0 there.'},
  {k:'lighting',l:'Lighting',u:'W/m²',v:8,st:1,show:s=>s.sensMode==='build',why:'Shown because Sensible heat is “Build it up”.'},
  {k:'equip',l:'Machines and equipment',u:'kW',v:5,st:1,show:s=>s.sensMode==='build',why:'Shown because Sensible heat is “Build it up”.'},
- {k:'solar',l:'Fabric and solar gain',u:'kW',v:6,st:1,show:s=>s.sensMode==='build',why:'Shown because Sensible heat is “Build it up”.'},
+ {k:'solar',l:'Solar gain through glazing',u:'kW',v:6,st:1,show:s=>s.sensMode==='build',why:'Shown because Sensible heat is “Build it up”.',h:s=>'Glazing only — conduction through the fabric ('+n(s.fabricGain||0,1)+' kW) comes from Stage 1 and is added automatically.'},
  {k:'otherSens',l:'Anything else',u:'kW',v:0,st:1,show:s=>s.sensMode==='build',why:'Shown because Sensible heat is “Build it up”.'},
  {grp:'Moisture made in the room',sub:'people moisture is automatic — add process sources here'},
  {k:'procLatent',l:'Process moisture — wash-down, product, steam leaks',u:'kg/h',v:0,st:1,
@@ -920,9 +929,6 @@ const SEC=[
   h:s=>{const b=bathEvap(s,101.325);return 'At '+n(s.bathTemp,0)+'°C water in '+n(s.roomT,0)+'°C / '+n(s.roomRH,0)+'% room air this evaporates about <b>'+n(b,1)+' kg/h</b> (ASHRAE Applications Ch.6 Eq.2, SI form — approximate, still to active water). It is added automatically, never typed twice.';}},
  {k:'bathTemp',l:'Bath water temperature',u:'°C',v:30,st:1,show:s=>s.bathArea>0,why:'Shown because a bath area is entered.'},
  {k:'bathUse',l:'Bath surface',sel:{still:{n:'Still / covered (×0.5)'},light:{n:'Light use (×0.8)'},active:{n:'Active / agitated (×1.0)'}},v:'still',show:s=>s.bathArea>0,why:'Shown because a bath area is entered.'},
- {grp:'Winter heat',sub:'fabric only — fresh air is worked out by the tool'},
- {k:'winterLoss',l:'Winter fabric heat loss',u:'kW',v:25,st:1,h:'Fabric and infiltration only. The fresh-air load is calculated by the tool, so leave it out here.'},
- {k:'winterGains',l:'Internal gain you will credit in winter',u:'kW',v:0,st:1},
 ]},
 {id:'extract',mode:'design',badge:'03',stage:'loads',n:'Extracted loads — air taken out of the room',s:'LEV first, then what the unit spills',f:[
  {k:'extract',l:'LEV / canopy extract straight from the room',u:'l/s',au:true,v:0,st:50,
@@ -992,6 +998,8 @@ const SEC=[
  {k:'fanK',l:'Supply air temperature rise across the fan',u:'K',v:0.8,st:0.1,show:s=>s.fanMode==='k',why:'Shown because Supply fan heat is “As a temperature rise”.'},
  {k:'reheatSrc',l:'Reheat',seg:[['lphw','LPHW'],['recover','Run-around'],['hotgas','Hot gas'],['elec','Electric'],['none','None']],v:'lphw',
   h:'Hot gas reheat takes condenser heat back into the airstream — free to run, but unlike a run-around it does not reduce the cooling duty.'},
+ {k:'reheatDuty',l:'Reheat battery rated duty — 0 lets the tool size it',u:'kW',v:0,st:0.5,show:s=>s.reheatSrc!=='none',why:'Shown because a reheat source is selected.',
+  h:()=>{const R0=(typeof RES!=='undefined'&&RES)||null;const need=R0?R0.reheatSel:0;return 'Needed: <b>'+n(need,1)+' kW</b>'+(R0&&R0.reheatSh>R0.reheat+0.05?' (set by the mild damp morning, not the design day)':'')+'; the tool selects <b>'+n(catStep(need),1)+' kW</b>. Type a manufacturer\u2019s rated duty here to check a specific battery instead.';}},
  {k:'heatSrc',l:'Winter heating battery',seg:[['lphw','LPHW'],['elec','Electric'],['hp','Reverse-cycle DX']],v:'lphw'},
  {k:'hpCOP',l:'Heat pump COP at winter design',u:'',v:2.4,st:0.1,show:s=>s.heatSrc==='hp',why:'Shown because Winter heating is “Reverse-cycle DX”.',
   h:'Air source capacity falls away as ambient drops and defrost takes more out again. Published heating capacity is rated to BS EN 14511 at 7 deg C dry bulb / 6 deg C wet bulb outside air, so read the COP off the capacity table at your own winter design temperature rather than the headline figure.'},
@@ -1079,6 +1087,8 @@ function migrateState(d){
   if(d.bathUse===undefined) d.bathUse='still';
   if(d.frostProv===undefined) d.frostProv=(d.confirmedFrost==='yes')?'strategy':'coil';
   if(d.frostDuty===undefined) d.frostDuty=0;
+  if(d.reheatDuty===undefined) d.reheatDuty=0;
+  if(d.fabricGain===undefined) d.fabricGain=0;
   if(d.frostSrc===undefined||d.frostSrc==='dx') d.frostSrc='lphw';
   if(d.frostNote===undefined) d.frostNote=(d.confirmedFrost==='yes')?'Carried over: frost protection was recorded as provided. Describe the strategy here.':'';
   if(d.autoSelDone===undefined) d.autoSelDone=true;   // existing saves keep their own selection
@@ -1812,7 +1822,7 @@ function checks(R){
     const pct=R.reheat/R.total*100;
     if(S.reheatSrc==='recover') push('ok','Reheat is recovered, not bought',
       `${n(R.reheat,1)} kW returned across the coil by the run-around. It also takes the same ${n(R.reheat,1)} kW off the cooling duty — size the chiller on ${n(R.total-R.reheat,1)} kW, not ${n(R.total,1)} kW.`);
-    else push(pct>25?'warn':'ok','Reheat is being paid for',
+    else push('ok','Reheat is being paid for',
       `${n(R.reheat,1)} kW, which is ${n(pct,0)}% of the cooling duty. A run-around coil or heat pipe across the cooling coil would recover it and cut the chiller by the same amount. Part L expects simultaneous heating and cooling to be justified.`);
   } else push('ok','No reheat needed','The coil lands on the supply condition without a reheat battery.');
 
@@ -1875,8 +1885,17 @@ function checks(R){
   }
   if(S.reheatSrc==='hotgas'&&R.reheat>0) push('ok','Hot gas reheat is free to run',
     `${n(R.reheat,1)} kW of condenser heat back into the air. It costs nothing to run, but unlike a run-around it does not reduce the ${n(R.total,1)} kW cooling duty — the condenser still rejects the rest.`);
-  if(S.reheatSrc==='elec'&&R.reheatSel>0) push('warn','Electric reheat',
-    `${n(R.reheatSel,1)} kW on resistance heat, about ${n(R.amps(R.reheatSel),0)} A at 400 V${R.reheatSh>R.reheat+0.05?' — sized by the mild damp morning, not the design day':''}. Bought at full price and running at the same time as the cooling.`);
+  if(S.reheatSrc!=='none'&&R.reheatSel>0){
+    const srcTx=S.reheatSrc==='elec'?'electric':S.reheatSrc==='lphw'?'LPHW':S.reheatSrc==='hotgas'?'hot gas':'run-around';
+    const sizedBy=R.reheatSh>R.reheat+0.05?' (set by the mild damp morning, not the design day)':'';
+    const elecTx=S.reheatSrc==='elec'?` About ${n(R.amps(R.reheatEff),0)} A at 400 V on resistance heat — bought at full price and running at the same time as the cooling; confirm the incomer.`:'';
+    if(R.reheatAuto) push('ok','Reheat battery selected by the tool',
+      `${n(R.reheatEff,1)} kW ${srcTx} — the next catalogue step above the ${n(R.reheatSel,1)} kW needed${sizedBy}.${elecTx} Type a manufacturer’s rated duty under 06 to check a specific battery instead.`);
+    else if(S.reheatDuty+1e-6>=R.reheatSel) push('ok','Reheat battery covers the duty',
+      `${n(S.reheatDuty,1)} kW ${srcTx} rated against ${n(R.reheatSel,1)} kW needed${sizedBy}.${elecTx}`);
+    else push('bad','Reheat battery is short',
+      `${n(S.reheatDuty,1)} kW rated against ${n(R.reheatSel,1)} kW needed${sizedBy} — short by ${n(R.reheatSel-S.reheatDuty,1)} kW. The supply lands ${n((R.reheatSel-S.reheatDuty)/Math.max(0.01,R.mda*1.02),1)} K cold when the coil is driven for humidity.`);
+  }
   if(S.heatSrc==='elec'&&R.heater>0) push('warn','Electric heater battery',
     `${n(R.heater,1)} kW, about ${n(R.amps(R.heater),0)} A at 400 V three phase. Check the incomer will take it before you promise it.`);
   if(S.heatSrc==='hp'&&R.heater>0) push('warn','Heat pump heating at winter design',
@@ -1956,7 +1975,7 @@ const FIXMAP=[
  ['Air alone will not heat','plant',R=>`Cover the ${n(R.heatShort,1)} kW shortfall with heater battery, or accept a cooler winter room.`],
  ['No humidifier selected','plant',R=>`Select humidification for ${n(R.humKgh,1)} kg/h, or drop the winter humidity target.`],
  ['Evaporating temperature will frost','plant','Add hot-gas or reverse-cycle defrost, or keep evaporating at 1C or above.'],
- ['Electric reheat','plant',R=>`Move reheat to LPHW, run-around or hot gas — or confirm the incomer takes about ${n(R.amps(R.reheatSel),0)} A extra.`],
+ ['Reheat battery is short','plant',R=>`Raise the rated duty to at least ${n(R.reheatSel,1)} kW (the tool selects ${n(catStep(R.reheatSel),1)} kW) — or set it back to 0 and let the tool size it.`],
  ['Frost coil is short','frost',R=>`Raise the rated duty to at least ${n(R.frostSuggest,1)} kW (the tool selects ${n(frostSize(R.frostSuggest),1)} kW) — or set the duty back to 0 and let the tool size it.`],
  ['Frost protection is still required','frost',R=>`Set Frost protection to “Frost coil” under 07 — the tool sizes it at ${n(frostSize(R.frostSuggest),1)} kW — or describe the strategy provided.`]
 ];
@@ -1977,6 +1996,7 @@ function holdsAllPoints(R){
 }
 function autoSelect(){
   if(S.reheatSrc==='none') S.reheatSrc=S.heatSrc==='lphw'?'lphw':(S.coolSrc==='dx'?'hotgas':'elec');
+  S.reheatDuty=0;
   const order=S.coolSrc==='dx'?['dx3','dx4','dx5','dx6']:['chw6','chw8'];
   let pick=null;
   for(const k of order){S.coilPreset=k; S.CF=COILPRESETS[k].cf; if(holdsAllPoints(solve(S))){pick=k; break;}}
@@ -2107,7 +2127,7 @@ function equipRows(R){
   rows.push(['Cooling duty — net into the space',`${n(R.netCool,1)} kW`,'']);
   rows.push(['Supply fan and motor heat',`${n(R.fanKW,1)} kW`,`${n(R.fanRise,2)} K rise`]);
   rows.push(['Fresh-air share of the cooling duty',`${n(R.oaLoad,1)} kW`,'']);
-  rows.push(['Reheat battery ('+(S.reheatSrc==='hotgas'?'hot gas':S.reheatSrc==='recover'?'run-around':S.reheatSrc)+')',`${n(R.reheatSel,1)} kW`,(R.reheatSh>R.reheat+0.05?'sized by the mild damp morning · ':'')+(S.reheatSrc==='lphw'?wu(R.lphwFlowSel)+' LPHW':S.reheatSrc==='elec'?n(R.amps(R.reheatSel),0)+' A':R.reheatFree?'free':'')]);
+  rows.push(['Reheat battery ('+(S.reheatSrc==='hotgas'?'hot gas':S.reheatSrc==='recover'?'run-around':S.reheatSrc)+')'+(S.reheatSrc==='none'?'':R.reheatAuto?' — selected by the tool':' — rated'),`${n(R.reheatEff,1)} kW`,(S.reheatSrc==='none'?'':`needs ${n(R.reheatSel,1)} kW${R.reheatSh>R.reheat+0.05?' on the mild damp morning':''} · `)+(S.reheatSrc==='lphw'?wu(R.lphwFlowSel)+' LPHW':S.reheatSrc==='elec'?n(R.amps(R.reheatEff),0)+' A':R.reheatFree?'free':'')]);
   rows.push(['Winter heater battery ('+(S.heatSrc==='hp'?'heat pump':S.heatSrc)+')',`${n(R.heater,1)} kW`,S.heatSrc==='lphw'?wu(R.lphwHeatFlow)+' LPHW':S.heatSrc==='elec'?n(R.amps(R.heater),0)+' A':n(R.hpAbs,1)+' kW absorbed']);
   rows.push(['Total electrical load (fans excluded)',`${n(R.elecTotal,1)} kW`,`${n(R.amps(R.elecTotal),0)} A at 400 V`]);
   rows.push(['Winter supply temperature',`${n(R.ts_w,1)} °C`,'']);
