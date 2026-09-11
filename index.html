@@ -651,6 +651,11 @@ function solve(S){
      recovery) to +5°C so nothing downstream can freeze. Sized, not selected. */
   const frostAir=st(5,FAw.W,P);
   const frostSuggest=Math.max(0,m_oa_w*(frostAir.h-FAw.h));
+  /* Base frost-coil design: the suggestion carried through until a rated duty
+     overrides it. Water flow off the LPHW temperatures, current if electric. */
+  const frostAuto=S.frostProv==='coil'&&!(S.frostDuty>0);
+  const frostDutyEff=S.frostProv==='coil'?(S.frostDuty>0?S.frostDuty:frostSuggest):0;
+  const frostFlow=(S.frostSrc==='lphw')?frostDutyEff/(4.18*Math.max(1,S.lphwF-S.lphwR)):0;
   const heatElec = S.heatSrc==='elec' ? heater : 0;
   const hpAbs    = S.heatSrc==='hp' ? heater/Math.max(1,S.hpCOP) : 0;
   const elecTotal = reheatElec + heatElec + dxAbs + hpAbs;
@@ -696,7 +701,7 @@ function solve(S){
     reheat,oaLoad,chwFlow,lphwFlow,faceArea,rows,CF,
     fanRise,dxAbs,reheatElec,heatElec,hpAbs,elecTotal,amps,shortfall,reheatFree,adpMinSrc:coolBase,
     exh_ls,FAs,hrRatio:FA.ratio,hrSaved,fanKW,netCool,W_hi,W_lo,Wdeh,leakOut,roomPa,leakA,occSensKW:occSens,act:{n:OCC.label},
-    ts_w:ts_w_cap,dtHeat,heatShort,humKgh,humkW,heater,preheatAdb,lphwHeatFlow,qNet,frostSuggest,
+    ts_w:ts_w_cap,dtHeat,heatShort,humKgh,humkW,heater,preheatAdb,lphwHeatFlow,qNet,frostSuggest,frostDutyEff,frostAuto,frostFlow,
     shRHroom,W_room_s,leak_ls,press_ls,minach_ls,freshBase,vent,bathLatent,
     occLabel:R.occLabel,occScenario:R.occScenario,humidityMode:R.humidityMode,systemType:R.systemType,
     ach:flow/1000*3600/V, achFresh:oa_ls/1000*3600/V, oaPct:oa_ls/flow*100, dtSupply:S.roomT-supply.t,
@@ -958,11 +963,13 @@ const SEC=[
  {k:'lphwR',l:'LPHW return',u:'°C',v:60,st:5,show:s=>s.heatSrc==='lphw'||s.reheatSrc==='lphw',why:'Shown because heating or reheat uses LPHW.'},
  {k:'humid',l:'Winter humidification',seg:[['steam','Steam'],['adiabatic','Adiabatic'],['none','None']],v:'steam'},
 ]},
-{id:'frost',mode:'design',badge:'07',stage:'system',n:'Frost protection',s:'sized below — nothing here is assumed',show:s=>s.owDB<2,f:[
- {k:'frostProv',l:'Frost protection provided',seg:[['none','None — still required'],['coil','Frost coil on the fresh air'],['strategy','Other frost strategy (described below)']],v:'none',
-  h:'Outside air below 2\u00b0C can freeze the recovery or the cooling coil. The tool sizes a preheat that holds the winter fresh-air stream at +5\u00b0C — see the suggested duty in Results — and this entry records what is actually provided. A green result anywhere else never confirms it.'},
- {k:'frostDuty',l:'Frost coil rated duty',u:'kW',v:0,st:0.5,show:s=>s.frostProv==='coil',why:'Shown because Frost protection is “Frost coil”.',
-  h:'Rated preheat at winter design conditions. It must cover the suggested duty in Results.'},
+{id:'frost',mode:'design',badge:'07',stage:'system',n:'Frost protection',s:'sized below — nothing here is assumed',show:s=>s.owDB<=3,f:[
+{k:'frostProv',l:'Frost protection provided',seg:[['none','None — still required'],['coil','Frost coil on the fresh air'],['strategy','Other frost strategy (described below)']],v:'none',
+  h:'Outside air at or below 3\u00b0C can freeze the recovery or the cooling coil — the coil face runs colder than the air, so protection starts above 0\u00b0C. The tool sizes a preheat holding the winter fresh-air stream at +5\u00b0C and this entry records what is actually provided. A green result anywhere else never confirms it.'},
+ {k:'frostSrc',l:'Frost coil energy — which is it',seg:[['lphw','Hot water'],['elec','Electric'],['dx','DX']],v:'lphw',show:s=>s.frostProv==='coil',why:'Shown because Frost protection is “Frost coil”.',
+  h:'Hot water is the usual AHU answer off the LPHW circuit; electric is simple for small duties but runs at full price; DX preheat is unusual — confirm it with the manufacturer before relying on it.'},
+{k:'frostDuty',l:'Frost coil duty — suggested, override if needed',u:'kW',v:0,st:0.5,show:s=>s.frostProv==='coil',why:'Shown because Frost protection is “Frost coil”.',
+  h:()=>{const sug=(typeof RES!=='undefined'&&RES&&RES.frostSuggest)||0;return 'Suggested right now: <b>'+n(sug,1)+' kW</b> to hold the winter fresh air at +5\u00b0C. Leave at 0 and the suggestion is carried through flagged unconfirmed — or type the selected coil\u2019s rated duty to check it.';}},
  {k:'frostNote',l:'Frost strategy description',txt:1,v:'',show:s=>s.frostProv==='strategy',why:'Shown because Frost protection is “Other frost strategy”.',
   h:'Describe the strategy plainly, e.g. “glycol run-around with face-and-bypass frost control, proven to -6\u00b0C”.'},
 ]},
@@ -1036,6 +1043,7 @@ function migrateState(d){
   if(d.bathUse===undefined) d.bathUse='still';
   if(d.frostProv===undefined) d.frostProv=(d.confirmedFrost==='yes')?'strategy':'none';
   if(d.frostDuty===undefined) d.frostDuty=0;
+  if(d.frostSrc===undefined) d.frostSrc='lphw';
   if(d.frostNote===undefined) d.frostNote=(d.confirmedFrost==='yes')?'Carried over: frost protection was recorded as provided. Describe the strategy here.':'';
   if(d.coilPreset===undefined){
     let best='custom',bd=99;
@@ -1207,11 +1215,11 @@ function bindInputEvents(el,wasOpen){
     if(k==='coilPreset'&&COILPRESETS[e.target.value]&&e.target.value!=='custom'){
       S.CF=COILPRESETS[e.target.value].cf;
     }
-    buildInputs(); refresh();}));
+    refresh(); buildInputs();}));
   el.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',e=>{
     const btn=e.currentTarget, k=btn.dataset.k, v=btn.dataset.v;
     S[k]=(k==='motorInAir')?parseInt(v):v;
-    buildInputs(); refresh();}));
+    refresh(); buildInputs();}));
   el.querySelectorAll('.startchoice').forEach(b=>b.addEventListener('click',()=>{}));
   const ag=document.getElementById('addGroup');
   if(ag) ag.addEventListener('click',()=>{seedGroups(); S.occGroups.push({name:'Group '+(S.occGroups.length+1),n:0,act:'light',scen:S.occScenario||'Main'}); buildInputs(); refresh();});
@@ -1701,6 +1709,7 @@ function SRC(){return S.coolSrc==='dx'
 function checks(R){
   const C=[];
   const push=(lv,t,x)=>C.push({lv,t,x});
+  const frostSrcTxt=()=>S.frostSrc==='lphw'?'on hot water ('+wu(R.frostFlow)+' at '+n(S.lphwF,0)+'/'+n(S.lphwR,0)+'°C)':S.frostSrc==='elec'?'electric (about '+n(R.amps(R.frostDutyEff),0)+' A at 400 V)':'DX — confirm the selection with the manufacturer';
   /* Traceability first: example inputs and unconfirmed weather cap the whole
      assessment, however good the numbers look. */
   if(S.projectKind==='example') push('warn','Example project — inputs are not confirmed',
@@ -1828,10 +1837,12 @@ function checks(R){
     `${n(R.heater,1)} kW needed, ${n(R.hpAbs,1)} kW absorbed at COP ${n(S.hpCOP,1)}. Confirm the unit still makes ${n(R.heater,1)} kW at ${n(S.owDB,1)}°C after defrost. Published heating capacities are rated to BS EN 14511 at 7°C dry bulb / 6°C wet bulb outside, so a headline figure is not the figure at your winter design temperature.`);
   if(R.elecTotal>0) push('ok','Electrical load of this plant',
     `${n(R.elecTotal,1)} kW, about ${n(R.amps(R.elecTotal),0)} A at 400 V three phase, fans excluded.`);
-  if(S.owDB<2){
+  if(S.owDB<=3){
     const sug=R.frostSuggest;
-    if(S.frostProv==='coil'&&S.frostDuty+1e-6>=sug) push('ok','Frost coil covers the suggested preheat',
-      `${n(S.frostDuty,1)} kW rated against ${n(sug,1)} kW to hold ${fu(R.oa_ls)} of fresh air at +5\u00b0C in winter design. Confirm controls, frost-stat and drain-down with the supplier — the weather that sizes it is the weather you confirmed above.`);
+    if(S.frostProv==='coil'&&R.frostAuto) push('warn','Frost coil duty is suggested, not confirmed',
+      'Suggested '+n(sug,1)+' kW '+frostSrcTxt()+' to hold '+fu(R.oa_ls)+' of fresh air at +5°C in winter design. This is carried through as a working figure only \u2014 confirm the selection or type the rated duty under Frost protection.');
+    else if(S.frostProv==='coil'&&S.frostDuty+1e-6>=sug) push('ok','Frost coil covers the suggested preheat',
+      `${n(S.frostDuty,1)} kW rated against ${n(sug,1)} kW to hold ${fu(R.oa_ls)} of fresh air at +5\u00b0C in winter design${S.frostSrc==='lphw'?`, drawing ${wu(R.frostFlow)} at ${n(S.lphwF,0)}/${n(S.lphwR,0)}\u00b0C`:S.frostSrc==='elec'?`, about ${n(R.amps(R.frostDutyEff),0)} A at 400 V`:''}. Confirm controls, frost-stat and drain-down with the supplier — the weather that sizes it is the weather you confirmed above.`);
     else if(S.frostProv==='coil'&&S.frostDuty>0) push('bad','Frost coil is short of the suggested preheat',
       `${n(S.frostDuty,1)} kW rated against ${n(sug,1)} kW to hold ${fu(R.oa_ls)} of fresh air at +5\u00b0C. Upsize it or the recovery and cooling coil behind it will freeze.`);
     else if(S.frostProv==='coil') push('warn','Frost coil selected but no duty entered',
@@ -1886,7 +1897,7 @@ function buildResults(R){
   h+=`<div class="card rescard"><div class="cbody" style="padding-bottom:6px">
    <div class="rowhead"><span class="k">${esc(sysT.n)}</span><span class="sp"></span><span class="k">${esc(origin)} \u00b7 calc v${CALC_VERSION}</span></div>
    <div class="lead3">
-    <div><div class="k">What you need</div><div class="v">${fu(R.flow)} supply \u00b7 ${n(R.total,1)} kW cooling${R.heater>0.05?` \u00b7 ${n(R.heater,1)} kW heating`:''}${R.humKgh>0?` \u00b7 ${n(R.humKgh,1)} kg/h humidification`:''}${R.reheat>0?` \u00b7 ${n(R.reheat,1)} kW reheat`:''}</div></div>
+    <div><div class="k">What you need</div><div class="v">${fu(R.flow)} supply${S.owDB<=3?` \u00b7 frost ${n(R.frostDutyEff,1)} kW`:''} \u00b7 ${n(R.total,1)} kW cooling${R.heater>0.05?` \u00b7 ${n(R.heater,1)} kW heating`:''}${R.humKgh>0?` \u00b7 ${n(R.humKgh,1)} kg/h humidification`:''}${R.reheat>0?` \u00b7 ${n(R.reheat,1)} kW reheat`:''}</div></div>
     <div><div class="k">Are the conditions met</div><div class="v ${worst}">${ic[worst]} ${worst==='ok'?'Yes \u2014 holds':worst==='warn'?'Not yet \u2014 confirmation needed':worst==='na'?'Not assessed':'No \u2014 will not hold'}</div></div>
     <div><div class="k">What needs attention</div><div class="v" style="font-size:13px;font-weight:500">${out.length?esc(out.slice(0,3).map(c=>c.t).join(' \u00b7 '))+(out.length>3?` \u00b7 +${out.length-3} more below`:''):'Nothing outstanding.'}</div></div>
    </div>
@@ -1992,9 +2003,10 @@ function equipRows(R){
   rows.push(['Winter supply temperature',`${n(R.ts_w,1)} °C`,'']);
   rows.push(['Humidifier',R.humKgh>0?n(R.humKgh,1)+' kg/h':'not required',R.humKgh>0?(S.humid==='steam'?n(R.humkW,1)+' kW steam':'adiabatic'):'']);
   rows.push(['Room loads carried',`${n(R.qs,1)} kW sensible`,`${n(R.latKgh,1)} kg/h moisture${R.bathLatent>0.005?` (incl. ${n(R.bathLatent,1)} kg/h open bath)`:''}`]);
-  if(S.owDB<2){
-    rows.push(['Frost preheat suggested',`${n(R.frostSuggest,1)} kW`,`holds ${fu(R.oa_ls)} fresh air at +5\u00b0C in winter design`]);
-    rows.push(['Frost protection provided',S.frostProv==='coil'?n(S.frostDuty,1)+' kW rated':S.frostProv==='strategy'?'strategy recorded':'none — still required','']);
+  if(S.owDB<=3){
+    rows.push(['Frost preheat suggested',`${n(R.frostSuggest,1)} kW`,`heats ${fu(R.oa_ls)} fresh air from ${n(S.owDB,1)}\u00b0C to +5\u00b0C`]);
+    rows.push(['Frost coil base design',`${n(R.frostDutyEff,1)} kW ${S.frostSrc==='lphw'?'hot water':S.frostSrc==='elec'?'electric':'DX'}`,
+      S.frostProv!=='coil'?'no coil selected':R.frostAuto?'suggested figure — confirm or override':S.frostSrc==='lphw'?wu(R.frostFlow)+` at ${n(S.lphwF,0)}/${n(S.lphwR,0)}\u00b0C`:S.frostSrc==='elec'?n(R.amps(R.frostDutyEff),0)+' A at 400 V':'confirm selection with manufacturer']);
   }
   return rows;
 }
