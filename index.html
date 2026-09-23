@@ -21,6 +21,8 @@
   --brand:#2E90FF; --cyan:#2E90FF; --cool:#5FC8F5; --amber:#F2A03F; --blue:#5FC8F5; --violet:#A98BFF;
   --ok:#4ED08A; --warn:#F5C44B; --bad:#FF6B6B;
   --on-brand:#04121F;            /* text sitting on a brand-coloured button */
+  /* action orange: the large navigation buttons (start choices, stages, next/back) */
+  --act:#F2A03F; --on-act:#1A0E00; --act-ink:#F2A03F; --act-wash:rgba(242,160,63,.12);
   --rule:rgba(27,51,72,.55);     /* hairlines between fields and table rows */
   --header-bg:rgba(8,19,31,.94); --bar-bg:rgba(9,20,32,.97);
   --track:#0B1A28; --fill:#1C3550;
@@ -38,6 +40,7 @@
   --brand:#1B6FD6; --cyan:#1B6FD6; --cool:#1785B8; --amber:#B8690A; --blue:#1785B8; --violet:#6A4BD1;
   --ok:#1E8E52; --warn:#9C7500; --bad:#CC3B33;
   --on-brand:#FFFFFF;
+  --act:#E8810C; --on-act:#1A0E00; --act-ink:#A85A00; --act-wash:rgba(232,129,12,.10);
   --rule:rgba(15,31,46,.12);
   --header-bg:rgba(238,242,247,.94); --bar-bg:rgba(255,255,255,.97);
   --track:#E3EAF2; --fill:#B9CFE8;
@@ -243,19 +246,26 @@ svg{display:block;width:100%;height:auto}
 
 /* ---------- guided workflow: start choices, stepper, banners ---------- */
 .startchoices{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-bottom:14px}
-.startchoice{background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:12px 13px;cursor:pointer;text-align:left;color:var(--ink);font-family:var(--body)}
-.startchoice[aria-pressed=true]{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset}
+.startchoice{background:var(--panel);border:2px solid var(--act);border-radius:12px;padding:11px 12px;cursor:pointer;text-align:left;color:var(--ink);font-family:var(--body);transition:background .12s}
+.startchoice:hover{background:var(--act-wash)}
+.startchoice[aria-pressed=true]{background:var(--act-wash);box-shadow:0 0 0 2px var(--act) inset}
 .startchoice h3{font-size:15.5px;margin-bottom:3px}
 .startchoice p{font-size:12.5px;color:var(--muted);margin:0;line-height:1.45}
-.startchoice .go{font-family:var(--cond);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--cyan);margin-top:7px;display:block}
-.steps{display:flex;gap:0;border:1px solid var(--line2);border-radius:9px;overflow:hidden;margin-bottom:12px;background:var(--panel)}
-.steps button{flex:1;background:transparent;border:0;border-right:1px solid var(--line);color:var(--muted);font-family:var(--cond);font-size:13px;padding:9px 6px;cursor:pointer;letter-spacing:.02em}
+.startchoice .go{font-family:var(--cond);font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-top:9px;display:inline-block;
+  background:var(--act);color:var(--on-act);border-radius:20px;padding:3px 11px}
+.startchoice[aria-pressed=true] .go{background:transparent;color:var(--act-ink);padding-left:0}
+.steps{display:flex;gap:0;border:2px solid var(--act);border-radius:9px;overflow:hidden;margin-bottom:12px;background:var(--panel)}
+.steps button{flex:1;background:transparent;border:0;border-right:1px solid var(--act);color:var(--act-ink);font-family:var(--cond);font-size:13px;font-weight:600;padding:9px 6px;cursor:pointer;letter-spacing:.02em}
 .steps button:last-child{border-right:0}
-.steps button[aria-current=step]{background:var(--brand);color:var(--on-brand);font-weight:700}
-.steps button .sn{display:block;font-family:var(--mono);font-size:10px;opacity:.75}
+.steps button:hover{background:var(--act-wash)}
+.steps button[aria-current=step]{background:var(--act);color:var(--on-act);font-weight:700}
+.steps button .sn{display:block;font-family:var(--mono);font-size:10px;opacity:.8}
 .stepnav{display:flex;gap:10px;margin:2px 0 14px}
-.stepnav button{flex:1;background:var(--panel2);border:1px solid var(--line2);color:var(--ink);border-radius:8px;padding:9px;font-family:var(--cond);font-size:13.5px;cursor:pointer}
-.stepnav button.primary{background:var(--brand);color:var(--on-brand);font-weight:700;border-color:var(--brand)}
+.stepnav button{flex:1;background:var(--panel);border:2px solid var(--act);color:var(--act-ink);border-radius:8px;padding:9px;font-family:var(--cond);font-size:13.5px;font-weight:600;cursor:pointer}
+.stepnav button:hover{background:var(--act-wash)}
+.stepnav button.primary{background:var(--act);color:var(--on-act);font-weight:700;border-color:var(--act)}
+.stepnav button.primary:hover{filter:brightness(1.07)}
+.startchoice:focus-visible,.steps button:focus-visible,.stepnav button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .banner{border:1px solid var(--warn);border-left:4px solid var(--warn);background:rgba(245,196,75,.08);border-radius:0 8px 8px 0;padding:9px 12px;font-size:13px;margin-bottom:12px}
 .banner b{font-family:var(--cond)}
 .banner .tag{font-family:var(--cond);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;border:1px solid currentColor;border-radius:20px;padding:1px 8px;margin-right:7px}
@@ -406,7 +416,7 @@ function frostAccum(kgs,t,hours){
   return {massKg,meltwaterL:massKg,defrostKWh:(sensKJ+meltKJ)/3600,sensKWh:sensKJ/3600,meltKWh:meltKJ/3600};
 }
 /* Calculation version — stamped into saves and PDF reports so results stay traceable. */
-const CALC_VERSION='1.4.0-guided';
+const CALC_VERSION='1.6.0-guided';
 /* System arrangements the tool models. All four are offered; 'roomvent' duties are an
    indicative single-zone split (room units take the room loads, ventilation takes the
    fresh air) — not a validated multi-zone design. */
@@ -465,6 +475,36 @@ function occOf(s){
   }
   const act=ACT[s.occAct]||ACT.light;
   return {n:s.occ,sens:s.occ*act.s/1000,lat:s.occ*act.l,label:`${s.occ} × ${act.n.toLowerCase()}`,scen:'Single occupancy'};
+}
+/* Internal heat credited against the winter fabric loss. Each summer gain line
+   carries the share of it that is reliably present at the winter design
+   condition (default 0%). Solar is never credited. With a single sensible
+   total there are no lines to work from, so one kW figure is taken instead,
+   capped at that total. */
+function winterCreditOf(s){
+  const pc=v=>Math.min(100,Math.max(0,+v||0))/100;
+  const peopleSens=occOf(s).sens, parts=[];
+  let capped=false;
+  const add=(name,base,share)=>{const kw=Math.max(0,base)*share; if(kw>0.0005) parts.push({name,base,pct:share*100,kw});};
+  if(s.sensMode==='build'){
+    add('people',peopleSens,pc(s.winPeoplePct));
+    add('lighting',(s.lighting||0)*(s.roomArea||0)/1000,pc(s.winLightPct));
+    add('equipment',s.equip||0,pc(s.winEquipPct));
+    add('anything else',s.otherSens||0,pc(s.winOtherPct));
+  } else {
+    const base=Math.max(0,s.qsTotal||0), want=Math.max(0,s.winCreditKW||0);
+    capped=want>base+1e-6;
+    const kw=Math.min(want,base);
+    if(kw>0.0005) parts.push({name:'from the sensible total',base,pct:base>0?kw/base*100:0,kw});
+    if(s.peopleInTotal==='no') add('people',peopleSens,pc(s.winPeoplePct));
+  }
+  const total=parts.reduce((a,p)=>a+p.kw,0);
+  const say=ps=>ps.length?ps.map(p=>`${p.name} ${n(p.kw,1)} kW`+(p.name==='from the sensible total'?'':` (${n(p.pct,0)}%)`)).join(' + '):'none credited';
+  /* An empty room warming up keeps only plant that runs regardless — people and
+     lighting drop out of the credit for that case. */
+  const warmParts=parts.filter(p=>p.name!=='people'&&p.name!=='lighting');
+  return {parts,total,capped,want:Math.max(0,s.winCreditKW||0),text:say(parts),
+    warmTotal:warmParts.reduce((a,p)=>a+p.kw,0),warmText:say(warmParts)};
 }
 /* room size — one volume for the whole tool (shell/leakage modelling removed) */
 function roomGeom(S){
@@ -638,33 +678,49 @@ function solve(S){
   let rows=10; for(const r of ROWS){if(CF<=r[0]){rows=r[1];break;}}
 
   // ---- winter ----
+  /* Two winter cases, heater sized on the worse:
+     occupied design — full fresh air, every credited gain, humidification;
+     unoccupied warm-up — nobody in, lights off, only the equipment and total-mode
+     credit left, fresh air as the warm-up controls leave it, plus any pull-up margin. */
   const OW=st(S.owDB,WfromRH(S.owDB,S.owRH/100,P),P);
   const vs_w=volSpec(S.roomT,W_r,P), mda_w=flow/1000/vs_w;
-  const FAw=recover(OW,exh_ls,oa_ls).s;
-  const m_oa_w=oa_ls/1000/FAw.v, m_ra_w=Math.max(0,mda_w-m_oa_w);
-  const W_Ew=(m_oa_w*FAw.W+m_ra_w*W_r)/mda_w, h_Ew=(m_oa_w*FAw.h+m_ra_w*h_r)/mda_w;
-  const Ew=mixState(h_Ew,W_Ew,P).s;
-  const qNet=S.winterLoss-S.winterGains;
-  const cpw=1.006+1.86*W_Ew;
-  const fanRiseW=fanRiseFor(mda_w,W_Ew);
-  const ts_w=S.roomT+qNet/(mda_w*cpw);
-  const dtHeat=ts_w-S.roomT;
-  const heatShort=dtHeat>S.dtHeatMax ? mda_w*cpw*(dtHeat-S.dtHeatMax) : 0;
-  const ts_w_cap=Math.min(ts_w,S.roomT+S.dtHeatMax);
-  const W_sup_w=Math.max(0,Whum-latKgh/3600/mda_w);
-  const humKgh=W_sup_w>W_Ew ? mda_w*(W_sup_w-W_Ew)*3600 : 0;
-  const t_coilOut_w=ts_w_cap-fanRiseW;
-  let heater=0,preheatAdb=0,humkW=0;
-  if(S.humid==='steam'||humKgh<=0){
-    heater=Math.max(0,mda_w*cpw*(t_coilOut_w-Ew.t));
-    humkW=humKgh*2675/3600;
-  } else {
-    const hFin=enth(t_coilOut_w,W_sup_w);
-    const tPre=tFromH(hFin,W_Ew);
-    preheatAdb=tPre;
-    heater=Math.max(0,mda_w*(enth(tPre,W_Ew)-Ew.h));
-    humkW=0;
-  }
+  const winCredit=winterCreditOf(S);
+  const winCase=(oaL,exhL,loss,credit,withHum)=>{
+    const FA=recover(OW,exhL,oaL).s;
+    const m_oa=oaL>0?oaL/1000/FA.v:0, m_ra=Math.max(0,mda_w-m_oa);
+    const W_E=(m_oa*FA.W+m_ra*W_r)/mda_w, h_E=(m_oa*FA.h+m_ra*h_r)/mda_w;
+    const E=mixState(h_E,W_E,P).s;
+    const qNet=loss-credit;
+    const cp=1.006+1.86*W_E;
+    const ts=S.roomT+qNet/(mda_w*cp);
+    const dt=ts-S.roomT;
+    const short=dt>S.dtHeatMax ? mda_w*cp*(dt-S.dtHeatMax) : 0;
+    const tsCap=Math.min(ts,S.roomT+S.dtHeatMax);
+    const tOut=tsCap-fanRiseFor(mda_w,W_E);
+    let heater=0,preheatAdb=0,humkW=0,humKgh=0;
+    const W_sup=Math.max(0,Whum-latKgh/3600/mda_w);
+    if(withHum) humKgh=W_sup>W_E ? mda_w*(W_sup-W_E)*3600 : 0;
+    if(S.humid==='steam'||humKgh<=0){
+      heater=Math.max(0,mda_w*cp*(tOut-E.t));
+      humkW=humKgh*2675/3600;
+    } else {
+      const tPre=tFromH(enth(tOut,W_sup),W_E);
+      preheatAdb=tPre;
+      heater=Math.max(0,mda_w*(enth(tPre,W_E)-E.h));
+    }
+    return {FA,m_oa,E,W_E,cp,qNet,loss,credit,oa_ls:oaL,ts,tsCap,dt,short,heater,preheatAdb,humkW,humKgh};
+  };
+  const occW=winCase(oa_ls,exh_ls,S.winterLoss,winCredit.total,true);
+  const warmFrac=FAO?1:S.warmFresh==='off'?0:S.warmFresh==='min'?Math.min(100,Math.max(0,+S.warmFreshPct||0))/100:1;
+  const warmMargin=Math.max(0,+S.warmMargin||0);
+  const warmW=winCase(oa_ls*warmFrac,exh_ls*warmFrac,S.winterLoss*(1+warmMargin/100),winCredit.warmTotal,false);
+  warmW.frac=warmFrac; warmW.margin=warmMargin;
+  const winGov=warmW.heater>occW.heater+0.005?'warm':'occ';
+  const FAw=occW.FA, m_oa_w=occW.m_oa, Ew=occW.E, W_Ew=occW.W_E;
+  const qNet=occW.qNet, ts_w=occW.ts, dtHeat=occW.dt, ts_w_cap=occW.tsCap;
+  const heatShort=Math.max(occW.short,warmW.short);
+  const humKgh=occW.humKgh, humkW=occW.humkW, preheatAdb=occW.preheatAdb;
+  const heater=Math.max(occW.heater,warmW.heater);
   const lphwHeatFlow=(S.heatSrc==='lphw')?heater/(4.18*Math.max(1,S.lphwF-S.lphwR)):0;
   /* Frost protection suggestion: heat the winter fresh-air stream (after any
      recovery) to +5°C so nothing downstream can freeze. Sized, not selected. */
@@ -741,7 +797,7 @@ function solve(S){
     reheat,oaLoad,chwFlow,lphwFlow,faceArea,rows,CF,
     fanRise,dxAbs,reheatElec,heatElec,hpAbs,elecTotal,amps,shortfall,reheatFree,adpMinSrc:coolBase,
     exh_ls,FAs,hrRatio:FA.ratio,hrSaved,fanKW,netCool,W_hi,W_lo,Wdeh,leakOut,roomPa,leakA,occSensKW:occSens,act:{n:OCC.label},
-    ts_w:ts_w_cap,dtHeat,heatShort,humKgh,humkW,heater,preheatAdb,lphwHeatFlow,qNet,frostSuggest,frostDutyEff,frostAuto,frostFlow,
+    ts_w:ts_w_cap,dtHeat,heatShort,humKgh,humkW,heater,preheatAdb,lphwHeatFlow,qNet,winCredit,occW,warmW,winGov,frostSuggest,frostDutyEff,frostAuto,frostFlow,
     shRHroom,shRHtp,shCtrl,reheatSh,reheatSel,reheatEff,reheatAuto,lphwFlowSel,W_room_s,leak_ls,press_ls,minach_ls,freshBase,vent,bathLatent,
     occLabel:R.occLabel,occScenario:R.occScenario,humidityMode:R.humidityMode,systemType:R.systemType,
     ach:flow/1000*3600/V, achFresh:oa_ls/1000*3600/V, oaPct:oa_ls/flow*100, dtSupply:S.roomT-supply.t,
@@ -895,8 +951,7 @@ const SEC=[
  {grp:'The fabric',sub:'what the shell does to the room in summer and in winter — fresh air is worked out by the tool'},
  {k:'fabricGain',l:'Summer heat gain through the fabric',u:'kW',v:0,st:0.5,
   h:'Conduction through walls, roof and glazing at the summer design condition (U × A × ΔT) — added to the room sensible gain in Loads whichever way that is entered. Solar through glazing is entered separately under Loads. Leave at 0 if the sensible total you enter in Loads already includes fabric.'},
- {k:'winterLoss',l:'Winter fabric heat loss',u:'kW',v:25,st:1,h:'Fabric and infiltration only. The fresh-air load is calculated by the tool, so leave it out here.'},
- {k:'winterGains',l:'Internal gain you will credit in winter',u:'kW',v:0,st:1},
+ {k:'winterLoss',l:'Winter fabric heat loss',u:'kW',v:25,st:1,h:'Fabric and infiltration only. The fresh-air load is calculated by the tool, so leave it out here. Any internal heat you can rely on in winter is taken off under Loads, line by line.'},
  {k:'humidityMode',l:'Humidity requirement',seg:[['none','No requirement'],['band','Permitted range'],['close','Close control']],v:'band',
   h:'No requirement still calculates moisture, condensation and coil loads — it only stops passing or failing humidity. Close control aims at the target itself inside its own tolerance; an exact real-world setpoint is never promised.'},
  {k:'roomArea',l:'Floor area',u:'m²',v:400,st:10},
@@ -919,9 +974,21 @@ const SEC=[
  {k:'qsTotal',l:'Total room sensible gain',u:'kW',v:40,st:1,show:s=>s.sensMode==='total',why:'Shown because Sensible heat is “I have a total”.',
   h:s=>'Lighting, machines and solar — whether people are inside depends on the line above, never count them twice. The summer fabric gain from Stage 1 ('+n(s.fabricGain||0,1)+' kW) is added on top, so leave it out of this total or set it to 0 there.'},
  {k:'lighting',l:'Lighting',u:'W/m²',v:8,st:1,show:s=>s.sensMode==='build',why:'Shown because Sensible heat is “Build it up”.'},
- {k:'equip',l:'Machines and equipment',u:'kW',v:5,st:1,show:s=>s.sensMode==='build',why:'Shown because Sensible heat is “Build it up”.'},
+ {k:'equip',l:'Machines and equipment',u:'kW',v:5,st:1,show:s=>s.sensMode==='build',why:'Shown because Sensible heat is “Build it up”.',
+  h:'Heat given off to the room air at the peak. Moisture from wet equipment — ovens, washers, steam — goes under Process moisture below.'},
  {k:'solar',l:'Solar gain through glazing',u:'kW',v:6,st:1,show:s=>s.sensMode==='build',why:'Shown because Sensible heat is “Build it up”.',h:s=>'Glazing only — conduction through the fabric ('+n(s.fabricGain||0,1)+' kW) comes from Stage 1 and is added automatically.'},
  {k:'otherSens',l:'Anything else',u:'kW',v:0,st:1,show:s=>s.sensMode==='build',why:'Shown because Sensible heat is “Build it up”.'},
+ {grp:'Heat you can rely on in winter',sub:'share of each gain above that is always there at the winter design condition — taken off the winter fabric loss'},
+ {k:'winPeoplePct',l:'People present',u:'%',v:0,st:10,mn:0,mx:100,show:s=>s.sensMode==='build'||s.peopleInTotal==='no',why:'Shown because people are counted separately from any sensible total.',
+  h:s=>'Of '+n(occOf(s).sens,1)+' kW people sensible heat. Leave at 0 unless the room is staffed whenever heating is needed — an empty room warming up on a cold morning is usually the worst case.'},
+ {k:'winLightPct',l:'Lighting on',u:'%',v:0,st:10,mn:0,mx:100,show:s=>s.sensMode==='build',why:'Shown because Sensible heat is “Build it up”.',
+  h:s=>'Of '+n((s.lighting||0)*(s.roomArea||0)/1000,1)+' kW lighting. Usually 0 — lights are off during warm-up and increasingly on presence detection.'},
+ {k:'winEquipPct',l:'Equipment running',u:'%',v:0,st:10,mn:0,mx:100,show:s=>s.sensMode==='build',why:'Shown because Sensible heat is “Build it up”.',
+  h:s=>'Of '+n(s.equip||0,1)+' kW equipment. Credit only the continuous base load — a process or server that runs 24/7 — not the peak.'},
+ {k:'winOtherPct',l:'Anything else present',u:'%',v:0,st:10,mn:0,mx:100,show:s=>s.sensMode==='build'&&(s.otherSens||0)>0,why:'Shown because “Anything else” has a value.',
+  h:s=>'Of '+n(s.otherSens||0,1)+' kW.'},
+ {k:'winCreditKW',l:'Of that total, guaranteed in winter',u:'kW',v:0,st:0.5,mn:0,show:s=>s.sensMode==='total',why:'Shown because Sensible heat is “I have a total”.',
+  h:s=>'Heat inside the '+n(s.qsTotal||0,1)+' kW total that is always present when heating is needed. Capped at that total. Leave out solar — the winter design case has none. Use “Build it up” to credit line by line instead.'},
  {grp:'Moisture made in the room',sub:'people moisture is automatic — add process sources here'},
  {k:'procLatent',l:'Process moisture — wash-down, product, steam leaks',u:'kg/h',v:0,st:1,
   h:s=>{const b=bathEvap(s,101.325);return 'People moisture is added automatically from the occupancy above. Open baths below add about '+n(b,1)+' kg/h on top — the running total is shown in Results.';}},
@@ -1005,6 +1072,11 @@ const SEC=[
   h:'Air source capacity falls away as ambient drops and defrost takes more out again. Published heating capacity is rated to BS EN 14511 at 7 deg C dry bulb / 6 deg C wet bulb outside air, so read the COP off the capacity table at your own winter design temperature rather than the headline figure.'},
  {k:'lphwF',l:'LPHW flow',u:'°C',v:80,st:5,show:s=>s.heatSrc==='lphw'||s.reheatSrc==='lphw',why:'Shown because heating or reheat uses LPHW.'},
  {k:'lphwR',l:'LPHW return',u:'°C',v:60,st:5,show:s=>s.heatSrc==='lphw'||s.reheatSrc==='lphw',why:'Shown because heating or reheat uses LPHW.'},
+ {k:'warmFresh',l:'Fresh air during unoccupied warm-up',seg:[['full','Same as occupied'],['min','Reduced'],['off','Closed — recirculate']],v:'full',show:s=>s.systemType!=='fao',
+  h:'The heater is sized on the worse of two winter cases: occupied design, and an empty room warming up with no people or lighting heat. Close or reduce fresh air only if the controls really do it during warm-up and any LEV / extract is off too. A fresh-air-only unit always runs full fresh air.'},
+ {k:'warmFreshPct',l:'Warm-up fresh air',u:'% of occupied',v:30,st:10,mn:0,mx:100,show:s=>s.systemType!=='fao'&&s.warmFresh==='min',why:'Shown because warm-up fresh air is “Reduced”.'},
+ {k:'warmMargin',l:'Warm-up pull-up margin',u:'% on fabric loss',v:0,st:5,mn:0,
+  h:'Extra heat to bring the room back up from its overnight setback in the time allowed, on top of the steady fabric loss. CIBSE Guide A intermittent-heating methods give the figure. 0 = steady state only.'},
  {k:'humid',l:'Winter humidification',seg:[['steam','Steam'],['adiabatic','Adiabatic'],['none','None']],v:'steam'},
 ]},
 {id:'frost',mode:'design',badge:'07',stage:'system',n:'Frost protection',s:'sized by the tool — override with a rated duty if you have one',show:s=>s.owDB<=3,f:[
@@ -1089,6 +1161,21 @@ function migrateState(d){
   if(d.frostDuty===undefined) d.frostDuty=0;
   if(d.reheatDuty===undefined) d.reheatDuty=0;
   if(d.fabricGain===undefined) d.fabricGain=0;
+  /* The single "internal gain you will credit in winter" box moved into Loads as
+     a share of each gain. Carry an old figure over: whole into the kW box for a
+     sensible total, else filled into equipment, anything else, then lighting. */
+  if(d.winterGains!==undefined&&d.winPeoplePct===undefined){
+    let left=Math.max(0,+d.winterGains||0);
+    d.winPeoplePct=0; d.winLightPct=0; d.winEquipPct=0; d.winOtherPct=0; d.winCreditKW=0;
+    if(d.sensMode==='build'){
+      [['winEquipPct',+d.equip||0],['winOtherPct',+d.otherSens||0],['winLightPct',(+d.lighting||0)*(+d.roomArea||0)/1000]].forEach(([k,base])=>{
+        if(left<=0||base<=0) return; const kw=Math.min(left,base); d[k]=Math.round(kw/base*1000)/10; left-=kw;});
+    } else d.winCreditKW=left;
+  }
+  delete d.winterGains;
+  if(d.warmFresh===undefined) d.warmFresh='full';
+  if(d.warmFreshPct===undefined) d.warmFreshPct=30;
+  if(d.warmMargin===undefined) d.warmMargin=0;
   if(d.frostSrc===undefined||d.frostSrc==='dx') d.frostSrc='lphw';
   if(d.frostNote===undefined) d.frostNote=(d.confirmedFrost==='yes')?'Carried over: frost protection was recorded as provided. Describe the strategy here.':'';
   if(d.autoSelDone===undefined) d.autoSelDone=true;   // existing saves keep their own selection
@@ -1870,9 +1957,16 @@ function checks(R){
    `${shWhere}, even with the coil driven for humidity and ${n(R.reheatSh,1)} kW of reheat, the room only reaches ${n(R.shRHroom,0)}% RH — the coil’s apparatus dew point is the limit. Deepen the coil or lower the water / evaporating temperature.`);
   }
 
+  const wGov=R.winGov==='warm'?'unoccupied warm-up':'occupied design';
   if(R.heatShort>0) push('warn','Air alone will not heat the space',
-   `Holding to ${n(S.dtHeatMax,0)} K above room leaves ${n(R.heatShort,1)} kW short in winter. Add radiant, LPHW perimeter or more air.`);
-  else push('ok','Winter heating covered by the air',`Supply at ${n(R.ts_w,1)}°C, heater battery ${n(R.heater,1)} kW.`);
+   `Holding to ${n(S.dtHeatMax,0)} K above room leaves ${n(R.heatShort,1)} kW short in winter${R.warmW.short>R.occW.short?' on the unoccupied warm-up':''}. Add radiant, LPHW perimeter or more air.`);
+  else push('ok','Winter heating covered by the air',`Heater battery ${n(R.heater,1)} kW, set by the ${wGov} case. Occupied design: supply ${n(R.occW.tsCap,1)}°C, ${n(R.occW.heater,1)} kW. Unoccupied warm-up: supply ${n(R.warmW.tsCap,1)}°C, ${n(R.warmW.heater,1)} kW.`);
+  if(R.winGov==='warm'&&R.winCredit.total>R.winCredit.warmTotal+0.05) push('ok','Unoccupied warm-up sizes the heater',
+   `With nobody in and the lights off, ${n(R.winCredit.total-R.winCredit.warmTotal,1)} kW of the winter credit (people and lighting) is not there, so the heater is ${n(R.warmW.heater-R.occW.heater,1)} kW bigger than the occupied case alone would need.`);
+  if(R.winCredit.capped) push('warn','Winter credit is more than the sensible total',
+   `${n(R.winCredit.want,1)} kW was entered as guaranteed in winter, but the whole room sensible total is only ${n(S.qsTotal,1)} kW. Only ${n(Math.min(R.winCredit.want,S.qsTotal),1)} kW is credited.`);
+  if(R.winCredit.total>0.05&&R.qNet<0) push('warn','Credited gains more than cover the winter fabric loss',
+   `${n(R.winCredit.total,1)} kW credited against ${n(S.winterLoss,1)} kW of fabric loss, so the occupied room needs cooling, not heating, at winter design and supply runs below room temperature. The warm-up case already drops people and lighting; the equipment credit is still assumed to be running — if it is not, the heater is sized too small.`);
 
   if(R.humKgh>0) push('ok','Winter humidification needed',
    `${n(R.humKgh,1)} kg/h ${S.humid==='steam'?'as steam, about '+n(R.humkW,1)+' kW':'adiabatic — preheat to '+n(R.preheatAdb,1)+'°C first'}. ${S.humid==='none'?'':''}`);
@@ -1973,6 +2067,8 @@ const FIXMAP=[
  ['Off-design check — mild and damp needs reheat','plant','Select a reheat source under 06 (LPHW, run-around or hot gas) so the coil can run humidity-priority — Auto-select does this for you.'],
  ['Off-design check','plant','Deepen the coil (more rows) or lower the water / evaporating temperature so the ADP reaches the moisture the room needs on this morning — Auto-select tries each coil in turn.'],
  ['Air alone will not heat','plant',R=>`Cover the ${n(R.heatShort,1)} kW shortfall with heater battery, or accept a cooler winter room.`],
+ ['Winter credit is more than','loads','Lower “Of that total, guaranteed in winter” to what is really inside the sensible total — or switch to “Build it up” and credit line by line.'],
+ ['Credited gains more than cover','loads','Check the winter shares under “Heat you can rely on in winter” — credit only heat that is there on a cold, empty morning.'],
  ['No humidifier selected','plant',R=>`Select humidification for ${n(R.humKgh,1)} kg/h, or drop the winter humidity target.`],
  ['Evaporating temperature will frost','plant','Add hot-gas or reverse-cycle defrost, or keep evaporating at 1C or above.'],
  ['Reheat battery is short','plant',R=>`Raise the rated duty to at least ${n(R.reheatSel,1)} kW (the tool selects ${n(catStep(R.reheatSel),1)} kW) — or set it back to 0 and let the tool size it.`],
@@ -2130,6 +2226,8 @@ function equipRows(R){
   rows.push(['Reheat battery ('+(S.reheatSrc==='hotgas'?'hot gas':S.reheatSrc==='recover'?'run-around':S.reheatSrc)+')'+(S.reheatSrc==='none'?'':R.reheatAuto?' — selected by the tool':' — rated'),`${n(R.reheatEff,1)} kW`,(S.reheatSrc==='none'?'':`needs ${n(R.reheatSel,1)} kW${R.reheatSh>R.reheat+0.05?' on the mild damp morning':''} · `)+(S.reheatSrc==='lphw'?wu(R.lphwFlowSel)+' LPHW':S.reheatSrc==='elec'?n(R.amps(R.reheatEff),0)+' A':R.reheatFree?'free':'')]);
   rows.push(['Winter heater battery ('+(S.heatSrc==='hp'?'heat pump':S.heatSrc)+')',`${n(R.heater,1)} kW`,S.heatSrc==='lphw'?wu(R.lphwHeatFlow)+' LPHW':S.heatSrc==='elec'?n(R.amps(R.heater),0)+' A':n(R.hpAbs,1)+' kW absorbed']);
   rows.push(['Total electrical load (fans excluded)',`${n(R.elecTotal,1)} kW`,`${n(R.amps(R.elecTotal),0)} A at 400 V`]);
+  rows.push(['Winter heater — occupied design'+(R.winGov==='occ'?' — sizes the heater':''),`${n(R.occW.heater,1)} kW`,`net room heat ${n(R.occW.qNet,1)} kW = fabric loss ${n(S.winterLoss,1)} − credited gains ${n(R.occW.credit,1)} (${R.winCredit.text}) · ${fu(R.occW.oa_ls)} fresh air`]);
+  rows.push(['Winter heater — unoccupied warm-up'+(R.winGov==='warm'?' — sizes the heater':''),`${n(R.warmW.heater,1)} kW`,`net room heat ${n(R.warmW.qNet,1)} kW = fabric loss ${n(R.warmW.loss,1)}${R.warmW.margin>0?' (incl. '+n(R.warmW.margin,0)+'% pull-up)':''} − credited gains ${n(R.warmW.credit,1)} (${R.winCredit.warmText}) · ${R.warmW.oa_ls>0.5?fu(R.warmW.oa_ls)+' fresh air':'fresh air closed'}`]);
   rows.push(['Winter supply temperature',`${n(R.ts_w,1)} °C`,'']);
   rows.push(['Humidifier',R.humKgh>0?n(R.humKgh,1)+' kg/h':'not required',R.humKgh>0?(S.humid==='steam'?n(R.humkW,1)+' kW steam':'adiabatic'):'']);
   rows.push(['Room loads carried',`${n(R.qs,1)} kW sensible`,`${n(R.latKgh,1)} kg/h moisture${R.bathLatent>0.005?` (incl. ${n(R.bathLatent,1)} kg/h open bath)`:''}`]);
