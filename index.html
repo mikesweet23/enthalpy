@@ -416,7 +416,7 @@ function frostAccum(kgs,t,hours){
   return {massKg,meltwaterL:massKg,defrostKWh:(sensKJ+meltKJ)/3600,sensKWh:sensKJ/3600,meltKWh:meltKJ/3600};
 }
 /* Calculation version — stamped into saves and PDF reports so results stay traceable. */
-const CALC_VERSION='1.6.0-guided';
+const CALC_VERSION='1.7.0-guided';
 /* System arrangements the tool models. All four are offered; 'roomvent' duties are an
    indicative single-zone split (room units take the room loads, ventilation takes the
    fresh air) — not a validated multi-zone design. */
@@ -546,7 +546,6 @@ function solve(S){
      the coil only dries if its surface runs cold, and the room floats. */
   const Wdeh=HM==='close'?W_r:W_hi;
   const Whum=HM==='close'?W_r:W_lo;
-  const bal_exh=f=>S.exhMode==='bal'?Math.max(0,(S.freshMode==='pct'?S.freshPct/100*f:0)-S.extract):0;
   const room=st(S.roomT,W_r,P);
   const OA=st(S.osDB,WfromRH(S.osDB,S.osRH/100,P),P);
 
@@ -563,7 +562,16 @@ function solve(S){
     const es=S.hrEffS/100*ratio, el=(S.hrType==='wheel'?S.hrEffL/100:0)*ratio;
     return {s:st(src.t+es*(S.roomT-src.t), src.W+el*(W_r-src.W), P), ratio:ratio};
   };
-  const exhaustOf=f=>S.exhMode==='pct'?S.exhPct/100*f:S.exhMode==='lps'?S.exhFixed:Math.max(0,(S.freshMode==='pct'?S.freshPct/100*f:0)-S.extract);
+  /* Spill at the unit. Fresh air taken in at a recirculating unit's mixing box has to
+     leave again, so by default ('bal') the spill matches it — the fresh air less
+     whatever the LEV already pulls straight out of the room. A fresh-air-only unit
+     does not recirculate, so it always extracts its supply less the LEV. '% of supply'
+     and 'Fixed rate' are overrides for a unit that genuinely spills a different
+     amount, or none; the difference is then reported as a surplus or shortfall. */
+  const spillOf=(f,oa)=>FAO?Math.max(0,f-S.extract)
+    :S.exhMode==='pct'?S.exhPct/100*f
+    :S.exhMode==='lps'?S.exhFixed
+    :Math.max(0,oa-S.extract);
   const leak_ls=0;   // room-pressure modelling removed — the balance below is reported, never a pressure
   const press_ls=S.extract;   // the supply must at least replace what the LEV pulls out
   const minach_ls = S.minACH*V/3.6;
@@ -579,7 +587,7 @@ function solve(S){
     const vs=(S.flowRef==='return')?volSpec(S.roomT,W_r,P):volSpec(ts,Ws,P);
     mda=flow/1000/vs;
     oa_ls = FAO ? flow : S.freshMode==='pct' ? Math.min(flow,S.freshPct/100*flow) : Math.min(flow,freshBase);
-    exh_ls=FAO?Math.max(0,flow-S.extract):S.exhMode==='bal'?Math.max(0,oa_ls-S.extract):exhaustOf(flow);
+    exh_ls=spillOf(flow,oa_ls);
     FA=recover(OA,exh_ls,oa_ls); FAs=FA.s;
     m_oa=oa_ls/1000/FAs.v;
     const m_ra=Math.max(0,mda-m_oa);
@@ -613,7 +621,7 @@ function solve(S){
     const vs0=(S.flowRef==='return')?volSpec(S.roomT,W_r,P):volSpec(ts,Ws,P);
     const mda0=flow/1000/vs0;
     const oa0=FAO?flow:S.freshMode==='pct'?Math.min(flow,S.freshPct/100*flow):Math.min(flow,freshBase);
-    const ex0=FAO?Math.max(0,flow-S.extract):S.exhMode==='bal'?Math.max(0,oa0-S.extract):exhaustOf(flow);
+    const ex0=spillOf(flow,oa0);
     const FA0=recover(OA,ex0,oa0).s, mo0=oa0/1000/FA0.v, mr0=Math.max(0,mda0-mo0);
     const Em0=mixState((mo0*FA0.h+mr0*h_r)/mda0,(mo0*FA0.W+mr0*W_r)/mda0,P).s;
     ts=S.roomT-qs/(mda0*(1.006+1.86*Ws));
@@ -999,11 +1007,13 @@ const SEC=[
 ]},
 {id:'extract',mode:'design',badge:'03',stage:'loads',n:'Extracted loads — air taken out of the room',s:'LEV first, then what the unit spills',f:[
  {k:'extract',l:'LEV / canopy extract straight from the room',u:'l/s',au:true,v:0,st:50,
-  h:'Hoods, LEV and any other exhaust that never returns to the unit. The supply must replace every litre of it.'},
- {k:'exhMode',l:'Exhaust spilled from the return at the unit',seg:[['pct','% of supply'],['lps','Fixed rate'],['bal','Balance the room']],v:'pct',
-  h:'Fresh air has to leave somewhere. Whatever is not spilled at the unit or pulled by the LEV finds its own way in or out through doors and relief — the balance is shown, never a pressure (pressure modelling was removed as too flaky). “Balance the room” spills whatever fresh air remains after the LEV.'},
- {k:'exhPct',l:'Exhaust spill',u:'%',v:0,st:5,show:s=>s.exhMode==='pct',why:'Shown because Exhaust spill is “% of supply”.'},
- {k:'exhFixed',l:'Exhaust spill',u:'l/s',au:true,v:0,st:50,show:s=>s.exhMode==='lps',why:'Shown because Exhaust spill is “Fixed rate”.'},
+  h:s=>'Hoods, LEV and any other exhaust that never returns to the unit. The supply must replace every litre of it, and the fresh air has to bring it back in.'+(s.systemType==='fao'?' A fresh-air-only unit extracts the rest of its supply at the unit, so the room always balances.':'')},
+ {k:'exhMode',l:'Exhaust spilled from the return at the unit',seg:[['bal','Matches the fresh air'],['pct','% of supply'],['lps','Fixed rate']],v:'bal',show:s=>s.systemType!=='fao',why:'Shown because the arrangement recirculates room air.',
+  h:s=>{const R0=(typeof RES!=='undefined'&&RES)||null;
+    return 'Fresh air taken in at the unit has to leave again. On a recirculating unit the spill (relief) damper matches it: <b>“Matches the fresh air”</b> spills the fresh air less whatever the LEV above already takes out, so the room balances. Use “% of supply” or “Fixed rate” only when the unit genuinely spills a different amount, or has no spill at all — the difference then finds its own way in or out through doors and relief, shown as a surplus or shortfall, never a pressure.'
+      +(R0&&s.exhMode==='bal'?` At this design: <b>${fu(R0.oa_ls)}</b> fresh in, <b>${fu(R0.exh_ls)}</b> spilled${s.extract>0?` + ${fu(s.extract)} LEV`:''}.`:'');}},
+ {k:'exhPct',l:'Exhaust spill',u:'%',v:0,st:5,show:s=>s.systemType!=='fao'&&s.exhMode==='pct',why:'Shown because Exhaust spill is “% of supply”.'},
+ {k:'exhFixed',l:'Exhaust spill',u:'l/s',au:true,v:0,st:50,show:s=>s.systemType!=='fao'&&s.exhMode==='lps',why:'Shown because Exhaust spill is “Fixed rate”.'},
 ]},
 {id:'air',mode:'design',badge:'04',stage:'system',n:'Airflow and fresh air',s:'how much air moves — extracts were set in Loads',f:[
  {k:'flowMode',l:'Airflow',seg:[['solve','Work out what it needs'],['fixed','Use the unit I have']],v:'solve',
@@ -1143,8 +1153,13 @@ function seedGroups(){
   }
 }
 seedGroups();
-function migrateState(d){
+function migrateState(d,schema){
   /* Saved projects from earlier schemas: keep every number, map renamed keys. */
+  /* Before schema 4 the spill defaulted to 0% of supply, so a recirculating unit
+     spilled nothing and all its fresh air showed as a surplus. A save still on that
+     untouched default moves to the spill matching the fresh air; any spill that was
+     actually set is kept. */
+  if((schema||1)<4&&(d.exhMode===undefined||(d.exhMode==='pct'&&!(+d.exhPct>0)))) d.exhMode='bal';
   if(d.rhMode&&!d.humidityMode) d.humidityMode=d.rhMode==='setpoint'?'close':'band';
   if(d.humCloseTol===undefined) d.humCloseTol=3;
   if(d.peopleInTotal===undefined) d.peopleInTotal='yes';
@@ -1333,7 +1348,7 @@ function buildInputs(){
 function bindInputEvents(el,wasOpen){
   el.querySelectorAll('input[type=number][data-k]').forEach(i=>{
     i.addEventListener('input',e=>{const raw=parseFloat(e.target.value)||0;
-      S[e.target.dataset.k]=e.target.dataset.au?frU(raw):raw; applyVisibility(); refresh();});
+      S[e.target.dataset.k]=e.target.dataset.au?frU(raw):raw; refresh();});
     i.addEventListener('wheel',()=>{if(document.activeElement===i) i.blur();},{passive:true});
     i.setAttribute('inputmode','decimal');
   });
@@ -1400,7 +1415,7 @@ function buildInputsLight(){
 const DRV={sensible:['Sensible heat','the heat in the room and the coldest supply you will accept'],
  latent:['Moisture removal','how dry the supply air has to be to hold the room humidity'],
  fresh:['Fresh air','the ventilation rate for the people in the space'],
- pressure:['Extract make-up','replacing LEV extract and exhaust spill'],
+ pressure:['Extract make-up','replacing what the LEV takes straight out of the room'],
  minach:['Minimum air change','the air change rate imposed on this type of space']};
 
 let SCHZ=1;
@@ -1783,8 +1798,15 @@ function schematic(R,forPdf){
     [[1,'Fit'],[1.5,'Bigger'],[2.2,'Biggest']].map(z=>`<button data-z="${z[0]}" aria-pressed="${SCHZ===z[0]}" onclick="zoomSchem(${z[0]})">${z[1]}</button>`).join('')+
     `<span class="sp" style="flex:1"></span><span>Airflow</span>${auTog()}</div><div class="schem">${svg}</div>`;
 }
+/* How the spill at the unit is set — shared by the checks and the equipment table. */
+function spillBasis(){
+  if(S.systemType==='fao') return 'supply less the LEV — fresh-air-only unit';
+  if(S.exhMode==='pct') return `set at ${n(S.exhPct,0)}% of supply`;
+  if(S.exhMode==='lps') return 'set as a fixed rate';
+  return 'matches the fresh air'+(S.extract>0?' less the LEV':'');
+}
 function bal(R){
-  return Math.abs(R.leakOut)<0.5?'air balanced — supply matches extract'
+  return Math.abs(R.leakOut)<0.5?'air balanced — spill + LEV match fresh air'
     :`${fu(Math.abs(R.leakOut))} ${R.leakOut>0?'surplus — out via doors/relief':'shortfall — drawn in, provide a make-up path'}`;
 }
 
@@ -1926,18 +1948,26 @@ function checks(R){
       `Apparatus dew point ${n(R.t_ADP,1)}°C. The ${muBoth(R.cond)} taken out of the air is held on the fins as frost, so after ${n(S.defrostH||8,1)} h there is ${n(a.massKg,1)} kg of ice on the block and ${n(a.meltwaterL,1)} litres to drain at defrost. Freezing and sub-cooling it adds ${n(R.frostKW,2)} kW to the coil duty, and the defrost has to put ${n(a.defrostKWh,2)} kWh back (${n(a.sensKWh,2)} warming the ice, ${n(a.meltKWh,2)} melting it). Airflow will fall as the block ices, so allow for it in the fan and specify the defrost — hot gas, electric or reverse cycle — and a heated drain.`);
   } else if(R.wet) push('ok','Condensate drain',`Wet coil: ${muBoth(R.cond)}. Trap depth must exceed the fan negative static or the drain will not run.`);
 
+  const balSay=`${fu(R.oa_ls)} fresh air in; ${fu(R.exh_ls)} spilled at the unit (${spillBasis()})${S.extract>0?` and ${fu(S.extract)} by the LEV`:''}`;
+  const spillSet=S.systemType!=='fao'&&S.exhMode!=='bal';   // spill typed in rather than matched
   if(R.leakOut<-0.5) push('warn','More air leaves than enters — a make-up path is needed',
-    `Exhaust and extract take ${fu(-R.leakOut)} more than the fresh air brings in. That shortfall will be drawn in through doors, louvres or the shell — provide a deliberate make-up path (transfer grilles, relief) rather than letting the room starve. No pressure is calculated; pressure modelling was removed as too flaky.`);
+    `Spill and LEV take ${fu(-R.leakOut)} more than the fresh air brings in — ${balSay}. That shortfall is drawn in through doors, louvres or the shell. Raise the fresh air to at least ${fu(R.oa_ls-R.leakOut)} so the unit makes it up`+
+    (spillIsCut(R)?', or cut the spill — “Matches the fresh air” closes the balance':'')+
+    `, or provide a deliberate make-up path (transfer grilles, relief). No pressure is calculated.`);
   else if(R.leakOut>0.5) push('ok','Air balance leaves a surplus',
-    `${fu(R.leakOut)} more supplied than extracted — it finds its own way out through doors and relief. No pressure is calculated.`);
-  else push('ok','Air balance closes',`Fresh air in matches exhaust and extract out within ${fu(Math.abs(R.leakOut))}.`);
+    `${fu(R.leakOut)} more fresh air in than spill and LEV take out — ${balSay}. It finds its own way out through doors and relief.`+
+    (spillSet?' If the unit has a spill / relief damper, set the spill to “Matches the fresh air” and this closes.':'')+' No pressure is calculated.');
+  else push('ok','Air balance closes',`${balSay}.`);
   if(((S.coilPreset||'').startsWith('dx')&&S.coolSrc!=='dx')||((S.coilPreset||'').startsWith('chw')&&S.coolSrc!=='chw'))
     push('warn','Coil choice does not match the cooling source',
       `A ${(COILPRESETS[S.coilPreset]||{}).short||'custom'} coil is chosen with ${S.coolSrc==='dx'?'DX':'chilled-water'} cooling. Line the two up — or switch the choice to Custom and type the selected contact factor.`);
   if(R.hrRatio>0) push('ok','Heat recovery is earning its place',
     `${n(R.hrSaved,1)} kW off the fresh air. The exhaust covers ${n(R.hrRatio*100,0)}% of the fresh air stream.`);
   else if(S.hrType!=='none') push('warn','Heat recovery has nothing to work against',
-    'Recovery is selected but no air is being spilled at the unit. It needs an exhaust stream — either spill some return, or take the recovery out of the price.');
+    'Recovery is selected but no air is being spilled at the unit'+
+    (levTakesAll()
+      ?' — the LEV takes all of the fresh air back out before it returns to the unit. Recover off the LEV discharge with a run-around coil instead, or take the recovery out of the price.'
+      :'. It needs an exhaust stream — set the spill to “Matches the fresh air”, or take the recovery out of the price.'));
   const occN=occOf(S).n, oapp=occN>0?R.oa_ls/occN:0;
   if(occN>0) push(oapp<8?'warn':'ok','Fresh air per person',`${fu(oapp,1)} per person at design occupancy (${n(occN,0)} people in the sizing scenario).`);
 
@@ -2061,9 +2091,13 @@ const FIXMAP=[
  ['Supply air is very cold','air','Move more air for the same duty, or confirm high-induction diffusers — cold dumping brings complaints.'],
  ['The fresh air fogs','plant','Preheat the fresh air toward the return condition, or reduce the fresh-air fraction at winter design.'],
  ['The coil runs frosted','plant','Keep the coil surface above 0C or add timed defrost with meltwater drainage and count the defrost energy.'],
- ['More air leaves than enters','extract','Spill less exhaust at the unit or add a make-up air path — fresh minus exhaust minus extract must close.'],
+ ['More air leaves than enters',R=>spillIsCut(R)?'extract':'air',R=>spillIsCut(R)
+   ?`Set the spill to “Matches the fresh air” — that closes the balance — or raise the fresh air to at least ${fu(R.oa_ls-R.leakOut)}, or add a make-up air path.`
+   :`Raise the fresh air to at least ${fu(R.oa_ls-R.leakOut)} so the unit makes up what the LEV takes out, or add a deliberate make-up air path.`],
  ['Coil choice does not match','plant','Switch Coil choice to this cooling type above, or Custom with the selected contact factor.'],
- ['Heat recovery has nothing','extract','Spill exhaust at the unit for the recovery to work against, or set recovery back to None.'],
+ ['Heat recovery has nothing',R=>levTakesAll()?'plant':'extract',R=>levTakesAll()
+   ?'Nothing returns to the unit to recover from — recover off the LEV discharge with a run-around coil, or set recovery back to None.'
+   :'Set the spill to “Matches the fresh air” so the recovery has an exhaust stream to work against, or set recovery back to None.'],
  ['Off-design check — mild and damp needs reheat','plant','Select a reheat source under 06 (LPHW, run-around or hot gas) so the coil can run humidity-priority — Auto-select does this for you.'],
  ['Off-design check','plant','Deepen the coil (more rows) or lower the water / evaporating temperature so the ADP reaches the moisture the room needs on this morning — Auto-select tries each coil in turn.'],
  ['Air alone will not heat','plant',R=>`Cover the ${n(R.heatShort,1)} kW shortfall with heater battery, or accept a cooler winter room.`],
@@ -2075,7 +2109,11 @@ const FIXMAP=[
  ['Frost coil is short','frost',R=>`Raise the rated duty to at least ${n(R.frostSuggest,1)} kW (the tool selects ${n(frostSize(R.frostSuggest),1)} kW) — or set the duty back to 0 and let the tool size it.`],
  ['Frost protection is still required','frost',R=>`Set Frost protection to “Frost coil” under 07 — the tool sizes it at ${n(frostSize(R.frostSuggest),1)} kW — or describe the strategy provided.`]
 ];
-function decorateChecks(C,R){C.forEach(c=>{for(const m of FIXMAP){if(c.t.indexOf(m[0])===0){c.sec=c.sec||m[1]; const f=m[2]; c.fix=c.fix||(typeof f==='function'?f(R):f); break;}} if(!c.sec) c.sec='plant';});}
+/* Spill typed in (not matched) and actually spilling — cutting it is a real fix. */
+function spillIsCut(R){return S.systemType!=='fao'&&S.exhMode!=='bal'&&R.exh_ls>0.5;}
+/* Spill matched, but the LEV takes all the fresh air out before any returns to the unit. */
+function levTakesAll(){return S.systemType!=='fao'&&S.exhMode==='bal'&&S.extract>0;}
+function decorateChecks(C,R){C.forEach(c=>{for(const m of FIXMAP){if(c.t.indexOf(m[0])===0){c.sec=c.sec||(typeof m[1]==='function'?m[1](R):m[1]); const f=m[2]; c.fix=c.fix||(typeof f==='function'?f(R):f); break;}} if(!c.sec) c.sec='plant';});}
 function secLabel(id){const s=SEC.find(s=>s.id===id); return s?(s.badge+' · '+s.n):id;}
 function goSec(id){const s=SEC.find(s=>s.id===id); if(!s||s.mode!=='design') return; STAGE=s.stage||STAGE; buildInputs(); refresh(); const el=document.querySelector('[data-sec="'+id+'"]'); if(el){el.open=true; if(el.scrollIntoView) el.scrollIntoView();}}
 /* Year-round selection. Design day, the mild damp morning and winter design all have
@@ -2205,7 +2243,7 @@ function equipRows(R){
    ['Air change rate — total',`${n(R.ach,1)} ac/h`,`${fu(R.flow)} on ${n(R.V,0)} m³ (${n(S.roomArea,0)} m² × ${n(S.roomHeight,1)} m)`],
    ['Air change rate — fresh air',`${n(R.achFresh,2)} ac/h`,`${fu(R.oa_ls)} · ${n(R.oaPct,0)}% of supply${occOf(S).n>0?' · '+fu(R.oa_ls/occOf(S).n,1)+' per person':''}`],
    ['Fresh air / extract replaced',`${fu(R.oa_ls)} / ${fu(S.extract)}`,''],
-   ['Exhaust spilled at the unit',fu(R.exh_ls),''],
+   ['Exhaust spilled at the unit',fu(R.exh_ls),spillBasis()],
    ['Air balance — surplus / shortfall',R.leakOut>=0?fu(R.leakOut)+' surplus':fu(-R.leakOut)+' shortfall',R.leakOut>=0?'out via doors/relief (not quantified)':'provide a make-up path (not quantified)'],
    ['Cooling coil total / sensible / latent',`${n(R.total,1)} / ${n(R.sens,1)} / ${n(R.lat,1)} kW`,R.frosting?`incl. ${n(R.frostKW,2)} kW to freeze the frost`:''],
    ['Coil face area at '+n(S.faceVel,2)+' m/s',`${n(R.faceArea,2)} m²`,''],
@@ -2245,18 +2283,20 @@ function refresh(){ try{
   RES=solve(S);
   try{ const other=humidityModeOf(S)==='band'?'close':'band';
     RES.alt=solve(Object.assign({},S,{humidityMode:other,rhMode:other==='close'?'setpoint':'band'})); }catch(x){RES.alt=null;}
-  buildResults(RES);}catch(e){console.error(e);} }
+  buildResults(RES);
+  applyVisibility();   // hints that quote results (spill, reheat) read the fresh RES
+  }catch(e){console.error(e);} }
 function jobRef(){return (document.getElementById('jobName').value||'').trim();}
 function jobChanged(){document.title=(jobRef()?jobRef()+' · ':'')+'Room First · air & plant selection';}
 function saveFile(){
-  const blob=new Blob([JSON.stringify({app:'adi-room-first',schema:3,calcVersion:CALC_VERSION,job:jobRef(),airUnit:AU,waterUnit:WU,moistUnit:MU,mode:MODE,stage:STAGE,state:S},null,1)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({app:'adi-room-first',schema:4,calcVersion:CALC_VERSION,job:jobRef(),airUnit:AU,waterUnit:WU,moistUnit:MU,mode:MODE,stage:STAGE,state:S},null,1)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=(jobRef()||'room-first')+'.json'; a.click();
 }
 function loadFile(e){const f=e.target.files[0]; if(!f)return; const r=new FileReader();
   r.onload=()=>{try{const d=JSON.parse(r.result);
     if(d.state){
-      Object.assign(S,migrateState(d.state)); seedGroups();}
+      Object.assign(S,migrateState(d.state,d.schema)); seedGroups();}
     if(d.airUnit&&AIRUNITS[d.airUnit]){AU=d.airUnit; syncUnitButtons();}
     if(d.waterUnit&&WATERUNITS[d.waterUnit]){WU=d.waterUnit; syncWaterButtons();}
     if(d.moistUnit&&MOISTUNITS[d.moistUnit]){MU=d.moistUnit; syncMoistButtons();}
